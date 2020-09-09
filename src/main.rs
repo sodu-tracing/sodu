@@ -1,10 +1,14 @@
 #![allow(dead_code)]
 #![feature(test)]
 extern crate test;
-mod server;
+mod buffer;
+mod encoder;
+mod memtable;
 mod proto;
-mod utils;
+mod server;
 mod trace_writer;
+mod utils;
+
 fn main() {
     // Initialize all the global helper utils.
     utils::utils::init_all_utils();
