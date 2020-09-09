@@ -2482,7 +2482,7 @@ impl IntDataPoint {
         self.time_unix_nano = v;
     }
 
-    // int64 value = 4;
+    // sfixed64 value = 4;
 
 
     pub fn get_value(&self) -> i64 {
@@ -2560,10 +2560,10 @@ impl ::protobuf::Message for IntDataPoint {
                     self.time_unix_nano = tmp;
                 },
                 4 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                    if wire_type != ::protobuf::wire_format::WireTypeFixed64 {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_sfixed64()?;
                     self.value = tmp;
                 },
                 5 => {
@@ -2592,7 +2592,7 @@ impl ::protobuf::Message for IntDataPoint {
             my_size += 9;
         }
         if self.value != 0 {
-            my_size += ::protobuf::rt::value_size(4, self.value, ::protobuf::wire_format::WireTypeVarint);
+            my_size += 9;
         }
         for value in &self.exemplars {
             let len = value.compute_size();
@@ -2616,7 +2616,7 @@ impl ::protobuf::Message for IntDataPoint {
             os.write_fixed64(3, self.time_unix_nano)?;
         }
         if self.value != 0 {
-            os.write_int64(4, self.value)?;
+            os.write_sfixed64(4, self.value)?;
         }
         for v in &self.exemplars {
             os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
@@ -2676,7 +2676,7 @@ impl ::protobuf::Message for IntDataPoint {
                 |m: &IntDataPoint| { &m.time_unix_nano },
                 |m: &mut IntDataPoint| { &mut m.time_unix_nano },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeSfixed64>(
                 "value",
                 |m: &IntDataPoint| { &m.value },
                 |m: &mut IntDataPoint| { &mut m.value },
@@ -3131,7 +3131,7 @@ impl IntHistogramDataPoint {
         self.time_unix_nano = v;
     }
 
-    // uint64 count = 4;
+    // fixed64 count = 4;
 
 
     pub fn get_count(&self) -> u64 {
@@ -3146,7 +3146,7 @@ impl IntHistogramDataPoint {
         self.count = v;
     }
 
-    // int64 sum = 5;
+    // sfixed64 sum = 5;
 
 
     pub fn get_sum(&self) -> i64 {
@@ -3161,7 +3161,7 @@ impl IntHistogramDataPoint {
         self.sum = v;
     }
 
-    // repeated uint64 bucket_counts = 6;
+    // repeated fixed64 bucket_counts = 6;
 
 
     pub fn get_bucket_counts(&self) -> &[u64] {
@@ -3274,21 +3274,21 @@ impl ::protobuf::Message for IntHistogramDataPoint {
                     self.time_unix_nano = tmp;
                 },
                 4 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                    if wire_type != ::protobuf::wire_format::WireTypeFixed64 {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_uint64()?;
+                    let tmp = is.read_fixed64()?;
                     self.count = tmp;
                 },
                 5 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                    if wire_type != ::protobuf::wire_format::WireTypeFixed64 {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_sfixed64()?;
                     self.sum = tmp;
                 },
                 6 => {
-                    ::protobuf::rt::read_repeated_uint64_into(wire_type, is, &mut self.bucket_counts)?;
+                    ::protobuf::rt::read_repeated_fixed64_into(wire_type, is, &mut self.bucket_counts)?;
                 },
                 7 => {
                     ::protobuf::rt::read_repeated_double_into(wire_type, is, &mut self.explicit_bounds)?;
@@ -3319,14 +3319,12 @@ impl ::protobuf::Message for IntHistogramDataPoint {
             my_size += 9;
         }
         if self.count != 0 {
-            my_size += ::protobuf::rt::value_size(4, self.count, ::protobuf::wire_format::WireTypeVarint);
+            my_size += 9;
         }
         if self.sum != 0 {
-            my_size += ::protobuf::rt::value_size(5, self.sum, ::protobuf::wire_format::WireTypeVarint);
+            my_size += 9;
         }
-        for value in &self.bucket_counts {
-            my_size += ::protobuf::rt::value_size(6, *value, ::protobuf::wire_format::WireTypeVarint);
-        };
+        my_size += 9 * self.bucket_counts.len() as u32;
         my_size += 9 * self.explicit_bounds.len() as u32;
         for value in &self.exemplars {
             let len = value.compute_size();
@@ -3350,13 +3348,13 @@ impl ::protobuf::Message for IntHistogramDataPoint {
             os.write_fixed64(3, self.time_unix_nano)?;
         }
         if self.count != 0 {
-            os.write_uint64(4, self.count)?;
+            os.write_fixed64(4, self.count)?;
         }
         if self.sum != 0 {
-            os.write_int64(5, self.sum)?;
+            os.write_sfixed64(5, self.sum)?;
         }
         for v in &self.bucket_counts {
-            os.write_uint64(6, *v)?;
+            os.write_fixed64(6, *v)?;
         };
         for v in &self.explicit_bounds {
             os.write_double(7, *v)?;
@@ -3419,17 +3417,17 @@ impl ::protobuf::Message for IntHistogramDataPoint {
                 |m: &IntHistogramDataPoint| { &m.time_unix_nano },
                 |m: &mut IntHistogramDataPoint| { &mut m.time_unix_nano },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeFixed64>(
                 "count",
                 |m: &IntHistogramDataPoint| { &m.count },
                 |m: &mut IntHistogramDataPoint| { &mut m.count },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeSfixed64>(
                 "sum",
                 |m: &IntHistogramDataPoint| { &m.sum },
                 |m: &mut IntHistogramDataPoint| { &mut m.sum },
             ));
-            fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+            fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeFixed64>(
                 "bucket_counts",
                 |m: &IntHistogramDataPoint| { &m.bucket_counts },
                 |m: &mut IntHistogramDataPoint| { &mut m.bucket_counts },
@@ -3569,7 +3567,7 @@ impl DoubleHistogramDataPoint {
         self.time_unix_nano = v;
     }
 
-    // uint64 count = 4;
+    // fixed64 count = 4;
 
 
     pub fn get_count(&self) -> u64 {
@@ -3599,7 +3597,7 @@ impl DoubleHistogramDataPoint {
         self.sum = v;
     }
 
-    // repeated uint64 bucket_counts = 6;
+    // repeated fixed64 bucket_counts = 6;
 
 
     pub fn get_bucket_counts(&self) -> &[u64] {
@@ -3712,10 +3710,10 @@ impl ::protobuf::Message for DoubleHistogramDataPoint {
                     self.time_unix_nano = tmp;
                 },
                 4 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                    if wire_type != ::protobuf::wire_format::WireTypeFixed64 {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_uint64()?;
+                    let tmp = is.read_fixed64()?;
                     self.count = tmp;
                 },
                 5 => {
@@ -3726,7 +3724,7 @@ impl ::protobuf::Message for DoubleHistogramDataPoint {
                     self.sum = tmp;
                 },
                 6 => {
-                    ::protobuf::rt::read_repeated_uint64_into(wire_type, is, &mut self.bucket_counts)?;
+                    ::protobuf::rt::read_repeated_fixed64_into(wire_type, is, &mut self.bucket_counts)?;
                 },
                 7 => {
                     ::protobuf::rt::read_repeated_double_into(wire_type, is, &mut self.explicit_bounds)?;
@@ -3757,14 +3755,12 @@ impl ::protobuf::Message for DoubleHistogramDataPoint {
             my_size += 9;
         }
         if self.count != 0 {
-            my_size += ::protobuf::rt::value_size(4, self.count, ::protobuf::wire_format::WireTypeVarint);
+            my_size += 9;
         }
         if self.sum != 0. {
             my_size += 9;
         }
-        for value in &self.bucket_counts {
-            my_size += ::protobuf::rt::value_size(6, *value, ::protobuf::wire_format::WireTypeVarint);
-        };
+        my_size += 9 * self.bucket_counts.len() as u32;
         my_size += 9 * self.explicit_bounds.len() as u32;
         for value in &self.exemplars {
             let len = value.compute_size();
@@ -3788,13 +3784,13 @@ impl ::protobuf::Message for DoubleHistogramDataPoint {
             os.write_fixed64(3, self.time_unix_nano)?;
         }
         if self.count != 0 {
-            os.write_uint64(4, self.count)?;
+            os.write_fixed64(4, self.count)?;
         }
         if self.sum != 0. {
             os.write_double(5, self.sum)?;
         }
         for v in &self.bucket_counts {
-            os.write_uint64(6, *v)?;
+            os.write_fixed64(6, *v)?;
         };
         for v in &self.explicit_bounds {
             os.write_double(7, *v)?;
@@ -3857,7 +3853,7 @@ impl ::protobuf::Message for DoubleHistogramDataPoint {
                 |m: &DoubleHistogramDataPoint| { &m.time_unix_nano },
                 |m: &mut DoubleHistogramDataPoint| { &mut m.time_unix_nano },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeFixed64>(
                 "count",
                 |m: &DoubleHistogramDataPoint| { &m.count },
                 |m: &mut DoubleHistogramDataPoint| { &mut m.count },
@@ -3867,7 +3863,7 @@ impl ::protobuf::Message for DoubleHistogramDataPoint {
                 |m: &DoubleHistogramDataPoint| { &m.sum },
                 |m: &mut DoubleHistogramDataPoint| { &mut m.sum },
             ));
-            fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+            fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeFixed64>(
                 "bucket_counts",
                 |m: &DoubleHistogramDataPoint| { &m.bucket_counts },
                 |m: &mut DoubleHistogramDataPoint| { &mut m.bucket_counts },
@@ -3989,7 +3985,7 @@ impl IntExemplar {
         self.time_unix_nano = v;
     }
 
-    // int64 value = 3;
+    // sfixed64 value = 3;
 
 
     pub fn get_value(&self) -> i64 {
@@ -4082,10 +4078,10 @@ impl ::protobuf::Message for IntExemplar {
                     self.time_unix_nano = tmp;
                 },
                 3 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                    if wire_type != ::protobuf::wire_format::WireTypeFixed64 {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_sfixed64()?;
                     self.value = tmp;
                 },
                 4 => {
@@ -4114,7 +4110,7 @@ impl ::protobuf::Message for IntExemplar {
             my_size += 9;
         }
         if self.value != 0 {
-            my_size += ::protobuf::rt::value_size(3, self.value, ::protobuf::wire_format::WireTypeVarint);
+            my_size += 9;
         }
         if !self.span_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(4, &self.span_id);
@@ -4137,7 +4133,7 @@ impl ::protobuf::Message for IntExemplar {
             os.write_fixed64(2, self.time_unix_nano)?;
         }
         if self.value != 0 {
-            os.write_int64(3, self.value)?;
+            os.write_sfixed64(3, self.value)?;
         }
         if !self.span_id.is_empty() {
             os.write_bytes(4, &self.span_id)?;
@@ -4193,7 +4189,7 @@ impl ::protobuf::Message for IntExemplar {
                 |m: &IntExemplar| { &m.time_unix_nano },
                 |m: &mut IntExemplar| { &mut m.time_unix_nano },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeSfixed64>(
                 "value",
                 |m: &IntExemplar| { &m.value },
                 |m: &mut IntExemplar| { &mut m.value },
@@ -4669,7 +4665,7 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     pentelemetry.proto.common.v1.StringKeyValueR\x06labels\x12/\n\x14start_t\
     ime_unix_nano\x18\x02\x20\x01(\x06R\x11startTimeUnixNano\x12$\n\x0etime_\
     unix_nano\x18\x03\x20\x01(\x06R\x0ctimeUnixNano\x12\x14\n\x05value\x18\
-    \x04\x20\x01(\x03R\x05value\x12I\n\texemplars\x18\x05\x20\x03(\x0b2+.ope\
+    \x04\x20\x01(\x10R\x05value\x12I\n\texemplars\x18\x05\x20\x03(\x0b2+.ope\
     ntelemetry.proto.metrics.v1.IntExemplarR\texemplars\"\x93\x02\n\x0fDoubl\
     eDataPoint\x12E\n\x06labels\x18\x01\x20\x03(\x0b2-.opentelemetry.proto.c\
     ommon.v1.StringKeyValueR\x06labels\x12/\n\x14start_time_unix_nano\x18\
@@ -4680,23 +4676,23 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     t\x12E\n\x06labels\x18\x01\x20\x03(\x0b2-.opentelemetry.proto.common.v1.\
     StringKeyValueR\x06labels\x12/\n\x14start_time_unix_nano\x18\x02\x20\x01\
     (\x06R\x11startTimeUnixNano\x12$\n\x0etime_unix_nano\x18\x03\x20\x01(\
-    \x06R\x0ctimeUnixNano\x12\x14\n\x05count\x18\x04\x20\x01(\x04R\x05count\
-    \x12\x10\n\x03sum\x18\x05\x20\x01(\x03R\x03sum\x12#\n\rbucket_counts\x18\
-    \x06\x20\x03(\x04R\x0cbucketCounts\x12'\n\x0fexplicit_bounds\x18\x07\x20\
+    \x06R\x0ctimeUnixNano\x12\x14\n\x05count\x18\x04\x20\x01(\x06R\x05count\
+    \x12\x10\n\x03sum\x18\x05\x20\x01(\x10R\x03sum\x12#\n\rbucket_counts\x18\
+    \x06\x20\x03(\x06R\x0cbucketCounts\x12'\n\x0fexplicit_bounds\x18\x07\x20\
     \x03(\x01R\x0eexplicitBounds\x12I\n\texemplars\x18\x08\x20\x03(\x0b2+.op\
     entelemetry.proto.metrics.v1.IntExemplarR\texemplars\"\xfc\x02\n\x18Doub\
     leHistogramDataPoint\x12E\n\x06labels\x18\x01\x20\x03(\x0b2-.opentelemet\
     ry.proto.common.v1.StringKeyValueR\x06labels\x12/\n\x14start_time_unix_n\
     ano\x18\x02\x20\x01(\x06R\x11startTimeUnixNano\x12$\n\x0etime_unix_nano\
     \x18\x03\x20\x01(\x06R\x0ctimeUnixNano\x12\x14\n\x05count\x18\x04\x20\
-    \x01(\x04R\x05count\x12\x10\n\x03sum\x18\x05\x20\x01(\x01R\x03sum\x12#\n\
-    \rbucket_counts\x18\x06\x20\x03(\x04R\x0cbucketCounts\x12'\n\x0fexplicit\
+    \x01(\x06R\x05count\x12\x10\n\x03sum\x18\x05\x20\x01(\x01R\x03sum\x12#\n\
+    \rbucket_counts\x18\x06\x20\x03(\x06R\x0cbucketCounts\x12'\n\x0fexplicit\
     _bounds\x18\x07\x20\x03(\x01R\x0eexplicitBounds\x12L\n\texemplars\x18\
     \x08\x20\x03(\x0b2..opentelemetry.proto.metrics.v1.DoubleExemplarR\texem\
     plars\"\xd5\x01\n\x0bIntExemplar\x12V\n\x0ffiltered_labels\x18\x01\x20\
     \x03(\x0b2-.opentelemetry.proto.common.v1.StringKeyValueR\x0efilteredLab\
     els\x12$\n\x0etime_unix_nano\x18\x02\x20\x01(\x06R\x0ctimeUnixNano\x12\
-    \x14\n\x05value\x18\x03\x20\x01(\x03R\x05value\x12\x17\n\x07span_id\x18\
+    \x14\n\x05value\x18\x03\x20\x01(\x10R\x05value\x12\x17\n\x07span_id\x18\
     \x04\x20\x01(\x0cR\x06spanId\x12\x19\n\x08trace_id\x18\x05\x20\x01(\x0cR\
     \x07traceId\"\xd8\x01\n\x0eDoubleExemplar\x12V\n\x0ffiltered_labels\x18\
     \x01\x20\x03(\x0b2-.opentelemetry.proto.common.v1.StringKeyValueR\x0efil\
