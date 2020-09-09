@@ -36,7 +36,10 @@ impl MemTable {
 
     /// put_span puts the span into the memtable.
     pub fn put_span(&mut self, span: Span) {
+        self.span_freelist.clear();
         encode_span(&span, &mut self.span_freelist);
+        // TODO: check whether can it be done without freelist later. Whether worth to do the
+        //  optimization.
         let offset = self.spans.write_slice(self.span_freelist.bytes_ref());
         let ptr = SpanPointer {
             trace_id: span.trace_id,
@@ -160,7 +163,8 @@ mod tests {
         let mut buffer = Buffer::with_size(64 << 20);
         encode_span(&span3, &mut buffer);
         assert_eq!(spans[0], buffer.bytes_ref());
-        encode_span(&span4, &buffer);
+        buffer.clear();
+        encode_span(&span4, &mut buffer);
         assert_eq!(spans[1], buffer.bytes_ref())
     }
 }

@@ -1,6 +1,6 @@
 use crate::buffer::buffer::Buffer;
 use crate::proto::common::{AnyValue_oneof_value, KeyValue};
-use crate::proto::trace::{Span, Span_SpanKind};
+use crate::proto::trace::{Span, Span_SpanKind, Span_Event};
 use log::warn;
 // Tells that upcoming bytes of attribute key and value.
 const ATTRIBUTE_TYPE: u8 = 1;
@@ -45,8 +45,16 @@ pub fn encode_span(span: &Span, buffer: &mut Buffer) {
     encode_attributes(&span.attributes.as_ref().to_vec(),  buffer);
 }
 
+fn encode_event(event: &Vec<Span_Event>,buffer: &mut Buffer){
+    if event.len() == 0 {
+        return;
+    }
+
+}
+
 fn encode_attributes(attributes: &Vec<KeyValue>, buffer: &mut Buffer) {
     if attributes.len() == 0 {
+        buffer.write_byte(ATTRIBUTE_NOT_EXIST);
         return;
     }
     let mut one_attribute_written = false;
