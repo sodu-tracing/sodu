@@ -1,6 +1,6 @@
 use crate::buffer::buffer::Buffer;
 use crate::proto::common::{AnyValue_oneof_value, KeyValue};
-use crate::proto::trace::{Span, Span_SpanKind, Span_Event};
+use crate::proto::trace::{Span, Span_SpanKind, Span_Event, Span_Link};
 use log::warn;
 // Tells that upcoming bytes of attribute key and value.
 const ATTRIBUTE_TYPE: u8 = 1;
@@ -20,13 +20,8 @@ const DOUBLE_VAL_TYPE: u8 = 8;
 const INT_VAL_TYPE: u8 = 9;
 // Attribute of string val type.
 const STRING_VAL_TYPE: u8 = 10;
-// Tells that attribute exist.
-const ATTRIBUTE_EXIST: u8 = 11;
-// Tells that attribute not exist.
-const ATTRIBUTE_NOT_EXIST: u8 = 12;
-// Tells that attribute is end.
-const ATTRIBUTE_END: u8 = 13;
-
+// Tells that span is ended.
+const SPAN_END: u8 = 11;
 /// encode_span encodes the given span into the buffer.
 pub fn encode_span(span: &Span, buffer: &mut Buffer) {
     buffer.write_raw_slice(&span.span_id);
@@ -45,20 +40,38 @@ pub fn encode_span(span: &Span, buffer: &mut Buffer) {
     encode_attributes(&span.attributes.as_ref().to_vec(),  buffer);
 }
 
-fn encode_event(event: &Vec<Span_Event>,buffer: &mut Buffer){
-    if event.len() == 0 {
+fn encode_event(events: &Vec<Span_Event>,buffer: &mut Buffer){
+    if events.len() == 0 {
         return;
     }
+    for event in events{
+        buffer.write_byte(EVENT_TYPE);
+        buffer.write_raw_slice(&event.time_unix_nano.to_be_bytes());
+        buffer.write_slice(event.name.as_bytes());
+        encode_attributes(&event.attributes.to_vec(), buffer);
+    }
+}
 
+/// encode_links encode span links.
+fn encode_links(links: Vec<&Span_Link>, buffer: &mut Buffer){
+    if links.len() == 0{
+        return;
+    }
+    for link in links{
+        buffer.write_byte(LINK_TYPE);
+        buffer.write_raw_slice(&link.trace_id);
+        buffer.write_raw_slice(&link.span_id);
+        buffer.write_raw_slice(link.trace_state.as_bytes());
+        encode_attributes(&link.attributes.to_vec(), buffer);
+    }
 }
 
 fn encode_attributes(attributes: &Vec<KeyValue>, buffer: &mut Buffer) {
     if attributes.len() == 0 {
-        buffer.write_byte(ATTRIBUTE_NOT_EXIST);
         return;
     }
-    let mut one_attribute_written = false;
     for attribute in attributes {
+        buffer.write_byte(ATTRIBUTE_TYPE);
         let value = attribute.value.as_ref().unwrap().value.as_ref().unwrap();
         if let AnyValue_oneof_value::array_value(_) = value {
             warn!("dropping array attribute {:?}", attribute);
@@ -66,10 +79,6 @@ fn encode_attributes(attributes: &Vec<KeyValue>, buffer: &mut Buffer) {
         } else if let AnyValue_oneof_value::kvlist_value(_) = value {
             warn!("dropping kv list value {:?}", attribute);
             continue;
-        }
-        if !one_attribute_written {
-           buffer.write_byte(ATTRIBUTE_EXIST);
-            one_attribute_written = true;
         }
         match value {
             AnyValue_oneof_value::bool_value(val) => {
@@ -101,9 +110,7 @@ fn encode_attributes(attributes: &Vec<KeyValue>, buffer: &mut Buffer) {
             }
         }
     }
-    if one_attribute_written {
-        buffer.write_byte(ATTRIBUTE_END);
-    }
+
 }
 
 #[inline(always)]
