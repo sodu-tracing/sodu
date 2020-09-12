@@ -7,6 +7,10 @@ use protobuf::Message;
 use skiplist::ordered_skiplist::OrderedSkipList;
 use std::cmp::Ordering;
 use std::rc::Rc;
+use std::collections::btree_map::BTreeMap;
+use std::collections::HashSet;
+use std::collections::hash_map::RandomState;
+use crate::memtable::index_store::IndexStore;
 
 /// MAX_MEMTABLE_SPAN_ENTRIES is an estimate that memtable can hold ablest 50k spans.
 const MAX_MEMTABLE_SPAN_ENTRIES: usize = 50_000;
@@ -22,6 +26,7 @@ pub struct MemTable {
     /// free list while flushing the existing memory to the disk. This freelist can be
     /// use when we encode on the next run.
     span_freelist: Buffer,
+    index_store: IndexStore
 }
 
 impl MemTable {
@@ -31,13 +36,15 @@ impl MemTable {
             spans: Buffer::with_size(64 << 20),
             sorted_span_pointer: OrderedSkipList::with_capacity(MAX_MEMTABLE_SPAN_ENTRIES),
             span_freelist: Buffer::with_size(3_000),
+            index_store: Default::default(),
         }
     }
 
     /// put_span puts the span into the memtable.
     pub fn put_span(&mut self, span: Span) {
         self.span_freelist.clear();
-        encode_span(&span, &mut self.span_freelist);
+        self.index_store.set_current_trace(span.trace_id.clone());
+        encode_span(&span, &mut self.span_freelist,  &mut self.index_store);
         // TODO: check whether can it be done without freelist later. Whether worth to do the
         //  optimization.
         let offset = self.spans.write_slice(self.span_freelist.bytes_ref());
@@ -51,6 +58,10 @@ impl MemTable {
 
     pub fn span_size(&self) -> usize {
         self.spans.size()
+    }
+
+    pub fn index_size(&self) -> usize {
+        self.index_store.calculate_index_size()
     }
 
     pub fn iter(&mut self) -> MemtableIterator {
@@ -150,10 +161,11 @@ mod tests {
         assert_eq!(&span_trace_id[..], &trace_id);
         assert_eq!(spans.len(), 2);
         let mut buffer = Buffer::with_size(64 << 20);
-        encode_span(&span1, &mut buffer);
+        let mut index_store = IndexStore::default();
+        encode_span(&span1, &mut buffer, &mut index_store);
         assert_eq!(spans[0], buffer.bytes_ref());
         let mut buffer = Buffer::with_size(64 << 20);
-        encode_span(&span2, &mut buffer);
+        encode_span(&span2, &mut buffer, &mut index_store);
         assert_eq!(spans[1], buffer.bytes_ref());
 
         let (span_trace_id, spans) = itr.next().unwrap();
@@ -161,10 +173,10 @@ mod tests {
         assert_eq!(&span_trace_id[..], &trace_id);
         assert_eq!(spans.len(), 2);
         let mut buffer = Buffer::with_size(64 << 20);
-        encode_span(&span3, &mut buffer);
+        encode_span(&span3, &mut buffer, &mut index_store);
         assert_eq!(spans[0], buffer.bytes_ref());
         buffer.clear();
-        encode_span(&span4, &mut buffer);
+        encode_span(&span4, &mut buffer, &mut index_store);
         assert_eq!(spans[1], buffer.bytes_ref())
     }
 }

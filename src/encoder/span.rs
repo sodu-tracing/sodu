@@ -1,7 +1,11 @@
 use crate::buffer::buffer::Buffer;
 use crate::proto::common::{AnyValue_oneof_value, KeyValue};
 use crate::proto::trace::{Span, Span_SpanKind, Span_Event, Span_Link};
+use crate::utils::utils::create_index_key;
+use std::collections::HashSet;
 use log::warn;
+use crate::memtable::index_store::IndexStore;
+
 // Tells that upcoming bytes of attribute key and value.
 const ATTRIBUTE_TYPE: u8 = 1;
 // Tells that upcoming bytes is of link type.
@@ -23,7 +27,7 @@ const STRING_VAL_TYPE: u8 = 10;
 // Tells that span is ended.
 const SPAN_END: u8 = 11;
 /// encode_span encodes the given span into the buffer.
-pub fn encode_span(span: &Span, buffer: &mut Buffer) {
+pub fn encode_span(span: &Span, buffer: &mut Buffer, index_store: &mut IndexStore) {
     buffer.write_raw_slice(&span.span_id);
     // Parent span id can be empty because first span don't have any parent
     // span id.
@@ -37,10 +41,12 @@ pub fn encode_span(span: &Span, buffer: &mut Buffer) {
     buffer.write_raw_slice(&span.end_time_unix_nano.to_be_bytes());
     buffer.write_raw_slice(&[span_kind_to_u8(&span.kind)]);
     buffer.write_slice(span.name.as_bytes());
-    encode_attributes(&span.attributes.as_ref().to_vec(),  buffer);
+    encode_attributes(&span.attributes.as_ref().to_vec(),  buffer, index_store);
+    encode_event(&span.events.to_vec(), buffer, index_store);
+    encode_links(&span.links.to_vec(), buffer, index_store);
 }
 
-fn encode_event(events: &Vec<Span_Event>,buffer: &mut Buffer){
+fn encode_event(events: &Vec<Span_Event>,buffer: &mut Buffer, index_store: &mut IndexStore){
     if events.len() == 0 {
         return;
     }
@@ -48,12 +54,12 @@ fn encode_event(events: &Vec<Span_Event>,buffer: &mut Buffer){
         buffer.write_byte(EVENT_TYPE);
         buffer.write_raw_slice(&event.time_unix_nano.to_be_bytes());
         buffer.write_slice(event.name.as_bytes());
-        encode_attributes(&event.attributes.to_vec(), buffer);
+        encode_attributes(&event.attributes.to_vec(), buffer, index_store);
     }
 }
 
 /// encode_links encode span links.
-fn encode_links(links: Vec<&Span_Link>, buffer: &mut Buffer){
+fn encode_links(links: &Vec<Span_Link>, buffer: &mut Buffer, index_store:&mut IndexStore){
     if links.len() == 0{
         return;
     }
@@ -62,13 +68,13 @@ fn encode_links(links: Vec<&Span_Link>, buffer: &mut Buffer){
         buffer.write_raw_slice(&link.trace_id);
         buffer.write_raw_slice(&link.span_id);
         buffer.write_raw_slice(link.trace_state.as_bytes());
-        encode_attributes(&link.attributes.to_vec(), buffer);
+        encode_attributes(&link.attributes.to_vec(), buffer, index_store);
     }
 }
 
-fn encode_attributes(attributes: &Vec<KeyValue>, buffer: &mut Buffer) {
+fn encode_attributes(attributes: &Vec<KeyValue>, buffer: &mut Buffer, index_store: &mut IndexStore) {
     if attributes.len() == 0 {
-        return;
+        return ;
     }
     for attribute in attributes {
         buffer.write_byte(ATTRIBUTE_TYPE);
@@ -89,28 +95,31 @@ fn encode_attributes(attributes: &Vec<KeyValue>, buffer: &mut Buffer) {
                     continue;
                 }
                 buffer.write_byte(0);
+                index_store.add_index(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::string_value(val) => {
                 buffer.write_byte(STRING_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.as_bytes());
+                index_store.add_index(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::int_value(val) => {
                 buffer.write_byte(INT_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.to_be_bytes());
+                index_store.add_index(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::double_value(val) => {
                 buffer.write_byte(DOUBLE_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.to_be_bytes());
+                index_store.add_index(create_index_key(&attribute.key, val));
             }
             _ => {
                 panic!("undefined ub");
             }
         }
     }
-
 }
 
 #[inline(always)]
