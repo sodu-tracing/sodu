@@ -39,7 +39,7 @@ impl<'a> Iterator for MemtableIterator<'a> {
                 spans.push(self.buffer.slice_at(span_ptr.index));
                 self.next_trace_idx = self.next_trace_idx + 1;
                 // Insert all the indexes for this trace.
-                for index in &span_ptr.indices{
+                for index in &span_ptr.indices {
                     indices.insert(index);
                 }
                 continue;
@@ -50,7 +50,7 @@ impl<'a> Iterator for MemtableIterator<'a> {
             spans.push(self.buffer.slice_at(span_ptr.index));
             self.next_trace_idx = self.next_trace_idx + 1;
             // Insert all the indexes for this trace.
-            for index in &span_ptr.indices{
+            for index in &span_ptr.indices {
                 indices.insert(index);
             }
         }

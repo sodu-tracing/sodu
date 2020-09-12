@@ -6,11 +6,10 @@ use crate::proto::trace::Span;
 use protobuf::Message;
 use skiplist::ordered_skiplist::OrderedSkipList;
 use std::cmp::Ordering;
-use std::rc::Rc;
 use std::collections::btree_map::BTreeMap;
-use std::collections::HashSet;
 use std::collections::hash_map::RandomState;
-use crate::memtable::index_store::IndexStore;
+use std::collections::HashSet;
+use std::rc::Rc;
 
 /// MAX_MEMTABLE_SPAN_ENTRIES is an estimate that memtable can hold ablest 50k spans.
 const MAX_MEMTABLE_SPAN_ENTRIES: usize = 50_000;
@@ -49,16 +48,18 @@ impl MemTable {
             trace_id: span.trace_id,
             start_ts: span.start_time_unix_nano,
             index: offset,
-            indices: indices,
+            indices,
         };
         self.sorted_span_pointer.insert(ptr);
     }
 
+    /// span_size returns all the span size.
     pub fn span_size(&self) -> usize {
         self.spans.size()
     }
 
-
+    /// iter returns memtable iterator. It's used for iterate over traces in the
+    /// memtable.
     pub fn iter(&mut self) -> MemtableIterator {
         MemtableIterator {
             ordered_spans: &self.sorted_span_pointer,
@@ -67,6 +68,8 @@ impl MemTable {
         }
     }
 
+    /// clear clears all the state and hold the allocated memory. which can be used to
+    /// clear the state.
     pub fn clear(&mut self) {
         self.spans.clear();
         self.span_freelist.clear();
@@ -172,6 +175,5 @@ pub mod tests {
         buffer.clear();
         encode_span(&span4, &mut buffer);
         assert_eq!(spans[1], buffer.bytes_ref());
-
     }
 }

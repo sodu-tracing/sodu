@@ -1,10 +1,9 @@
 use crate::buffer::buffer::Buffer;
 use crate::proto::common::{AnyValue_oneof_value, KeyValue};
-use crate::proto::trace::{Span, Span_SpanKind, Span_Event, Span_Link};
+use crate::proto::trace::{Span, Span_Event, Span_Link, Span_SpanKind};
 use crate::utils::utils::create_index_key;
-use std::collections::HashSet;
 use log::warn;
-use crate::memtable::index_store::IndexStore;
+use std::collections::HashSet;
 
 // Tells that upcoming bytes of attribute key and value.
 const ATTRIBUTE_TYPE: u8 = 1;
@@ -27,7 +26,7 @@ const STRING_VAL_TYPE: u8 = 10;
 // Tells that span is ended.
 const SPAN_END: u8 = 11;
 /// encode_span encodes the given span into the buffer.
-pub fn encode_span(span: &Span, buffer: &mut Buffer) -> HashSet<String>{
+pub fn encode_span(span: &Span, buffer: &mut Buffer) -> HashSet<String> {
     buffer.write_raw_slice(&span.span_id);
     // Parent span id can be empty because first span don't have any parent
     // span id.
@@ -42,16 +41,15 @@ pub fn encode_span(span: &Span, buffer: &mut Buffer) -> HashSet<String>{
     buffer.write_raw_slice(&[span_kind_to_u8(&span.kind)]);
     buffer.write_slice(span.name.as_bytes());
     let mut indices = HashSet::default();
-    encode_attributes(&span.attributes.as_ref().to_vec(),  buffer, &mut indices);
-    encode_event(&span.events.to_vec(), buffer,&mut indices);
-    encode_links(&span.links.to_vec(), buffer,&mut indices);
+    encode_attributes(&span.attributes.as_ref().to_vec(), buffer, &mut indices);
+    encode_event(&span.events.to_vec(), buffer, &mut indices);
+    encode_links(&span.links.to_vec(), buffer, &mut indices);
     indices
 }
 
-fn encode_event(events: &Vec<Span_Event>,buffer: &mut Buffer, indices: &mut HashSet<String>){
-    if events.len() == 0 {
-    }
-    for event in events{
+fn encode_event(events: &Vec<Span_Event>, buffer: &mut Buffer, indices: &mut HashSet<String>) {
+    if events.len() == 0 {}
+    for event in events {
         buffer.write_byte(EVENT_TYPE);
         buffer.write_raw_slice(&event.time_unix_nano.to_be_bytes());
         buffer.write_slice(event.name.as_bytes());
@@ -60,11 +58,11 @@ fn encode_event(events: &Vec<Span_Event>,buffer: &mut Buffer, indices: &mut Hash
 }
 
 /// encode_links encode span links.
-fn encode_links(links: &Vec<Span_Link>, buffer: &mut Buffer, indices:&mut HashSet<String>){
-    if links.len() == 0{
+fn encode_links(links: &Vec<Span_Link>, buffer: &mut Buffer, indices: &mut HashSet<String>) {
+    if links.len() == 0 {
         return;
     }
-    for link in links{
+    for link in links {
         buffer.write_byte(LINK_TYPE);
         buffer.write_raw_slice(&link.trace_id);
         buffer.write_raw_slice(&link.span_id);
@@ -73,9 +71,13 @@ fn encode_links(links: &Vec<Span_Link>, buffer: &mut Buffer, indices:&mut HashSe
     }
 }
 
-fn encode_attributes(attributes: &Vec<KeyValue>, buffer: &mut Buffer, indices:&mut HashSet<String>){
+fn encode_attributes(
+    attributes: &Vec<KeyValue>,
+    buffer: &mut Buffer,
+    indices: &mut HashSet<String>,
+) {
     if attributes.len() == 0 {
-        return ;
+        return;
     }
     for attribute in attributes {
         buffer.write_byte(ATTRIBUTE_TYPE);
@@ -132,5 +134,50 @@ fn span_kind_to_u8(kind: &Span_SpanKind) -> u8 {
         Span_SpanKind::SPAN_KIND_CLIENT => Span_SpanKind::SPAN_KIND_CLIENT as u8,
         Span_SpanKind::SPAN_KIND_PRODUCER => Span_SpanKind::SPAN_KIND_PRODUCER as u8,
         Span_SpanKind::SPAN_KIND_CONSUMER => Span_SpanKind::SPAN_KIND_CONSUMER as u8,
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use crate::memtable::memtable::tests::gen_span;
+    use protobuf::Message;
+    use test::Bencher;
+    use crate::buffer::buffer::Buffer;
+    use crate::encoder::span::encode_span;
+
+    #[bench]
+    fn bench_protobuf_encoding(b: &mut Bencher) {
+        let mut trace_id: [u8; 16] = [0; 16];
+        let mut spans = Vec::new();
+        let mut span = gen_span();
+        span.trace_id = trace_id.to_vec();
+        spans.push(span.clone());
+        spans.push(span.clone());
+        spans.push(span.clone());
+        spans.push(span.clone());
+        b.iter(|| {
+            for span in spans.iter() {
+                let _bytes = span.write_to_bytes();
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_aakal_encoding(b: &mut Bencher) {
+        let mut trace_id: [u8; 16] = [0; 16];
+        let mut spans = Vec::new();
+        let mut span = gen_span();
+        span.trace_id = trace_id.to_vec();
+        spans.push(span.clone());
+        spans.push(span.clone());
+        spans.push(span.clone());
+        spans.push(span.clone());
+
+        b.iter(|| {
+            for span in spans.iter() {
+                let mut buffer = Buffer::with_size(span.compute_size() as usize);
+                encode_span(span, &mut buffer);
+            }
+        });
     }
 }

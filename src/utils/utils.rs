@@ -6,4 +6,6 @@ pub fn init_all_utils() {
 }
 
 /// create_index_key creates index key. It's used as a primary key to store posting list.
-pub fn create_index_key<T: Display>(k: &String, v: T) -> String{ format!("{}-{}", k,v) }
+pub fn create_index_key<T: Display>(k: &String, v: T) -> String {
+    format!("{}-{}", k, v)
+}

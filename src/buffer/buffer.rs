@@ -69,11 +69,13 @@ impl Buffer {
         self.position = self.position + buf.len();
     }
 
+    /// write byte writes byte to the buffer.
     pub fn write_byte(&mut self, b: u8) {
         self.inner[self.position] = b;
         self.position = self.position + 1;
     }
 
+    /// returns slice at the given offset.
     pub fn slice_at(&self, offset: usize) -> &[u8] {
         if (offset + 5 as usize) > self.inner.len() {
             panic!("invalid offset at slice_at");
@@ -102,7 +104,6 @@ impl Buffer {
     pub fn clear(&mut self) {
         self.position = 0;
     }
-
 }
 
 #[cfg(test)]

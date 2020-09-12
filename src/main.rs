@@ -6,8 +6,8 @@ mod encoder;
 mod memtable;
 mod proto;
 mod server;
-mod utils;
 mod table;
+mod utils;
 
 fn main() {
     // Initialize all the global helper utils.
