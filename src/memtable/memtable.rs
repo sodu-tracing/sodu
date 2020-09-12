@@ -26,7 +26,6 @@ pub struct MemTable {
     /// free list while flushing the existing memory to the disk. This freelist can be
     /// use when we encode on the next run.
     span_freelist: Buffer,
-    index_store: IndexStore
 }
 
 impl MemTable {
@@ -36,7 +35,6 @@ impl MemTable {
             spans: Buffer::with_size(64 << 20),
             sorted_span_pointer: OrderedSkipList::with_capacity(MAX_MEMTABLE_SPAN_ENTRIES),
             span_freelist: Buffer::with_size(3_000),
-            index_store: Default::default(),
         }
     }
 
@@ -51,10 +49,8 @@ impl MemTable {
             trace_id: span.trace_id,
             start_ts: span.start_time_unix_nano,
             index: offset,
+            indices: indices,
         };
-        for index in indices{
-            self.index_store.add_index(index, offset);
-        }
         self.sorted_span_pointer.insert(ptr);
     }
 
@@ -62,9 +58,6 @@ impl MemTable {
         self.spans.size()
     }
 
-    pub fn index_size(&self) -> usize {
-        self.index_store.calculate_index_size()
-    }
 
     pub fn iter(&mut self) -> MemtableIterator {
         MemtableIterator {
@@ -180,9 +173,5 @@ mod tests {
         encode_span(&span4, &mut buffer);
         assert_eq!(spans[1], buffer.bytes_ref());
 
-        assert_eq!(table.index_store.len(), 1);
-       for (_, list) in table.index_store.inner_ref(){
-           assert_eq!(list.len(), 4);
-       }
     }
 }

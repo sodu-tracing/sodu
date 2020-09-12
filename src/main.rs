@@ -8,6 +8,7 @@ mod proto;
 mod server;
 mod trace_writer;
 mod utils;
+mod table;
 
 fn main() {
     // Initialize all the global helper utils.

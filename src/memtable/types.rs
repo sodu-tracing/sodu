@@ -1,4 +1,6 @@
 use std::cmp::Ordering;
+use std::collections::HashSet;
+
 /// SpanPointer is used to navigate the index of the the given span in the
 /// the vector array. It's used only in the memtable.
 pub struct SpanPointer {
@@ -8,6 +10,7 @@ pub struct SpanPointer {
     pub start_ts: u64,
     // Index of the span.
     pub index: usize,
+    pub indices: HashSet<String>,
 }
 
 impl Ord for SpanPointer {
