@@ -3,16 +3,15 @@ use std::collections::HashSet;
 
 #[derive(Default)]
 pub struct IndexStore {
-    inner: BTreeMap<String, HashSet<Vec<u8>>>,
+    inner: BTreeMap<String, HashSet<usize>>,
     index_key_size: usize,
     no_of_trace_indexed: usize,
-    current_trace_id: Vec<u8>,
 }
 
 impl IndexStore {
-    pub fn add_index(&mut self, index: String){
+    pub fn add_index(&mut self, index: String, offset: usize){
         if let Some(posting_list) = self.inner.get_mut(&index){
-            if !posting_list.insert(self.current_trace_id.clone()){
+            if !posting_list.insert(offset){
                 return;
             }
             self.no_of_trace_indexed = self.no_of_trace_indexed + 1;
@@ -21,12 +20,8 @@ impl IndexStore {
         self.no_of_trace_indexed = self.no_of_trace_indexed + 1;
         self.index_key_size = self.index_key_size + index.len();
         let mut posting_list = HashSet::default();
-        posting_list.insert(self.current_trace_id.clone());
+        posting_list.insert(offset);
         self.inner.insert(index, posting_list);
-    }
-
-    pub fn set_current_trace(&mut self, trace_id: Vec<u8>){
-        self.current_trace_id = trace_id;
     }
 
     pub fn calculate_index_size(&self) -> usize{
@@ -37,5 +32,13 @@ impl IndexStore {
         // Add size of all the index key.
         size = size + self.index_key_size;
         size
+    }
+
+    pub fn len(&self) -> usize{
+        self.inner.len()
+    }
+
+    pub fn inner_ref(&self) -> &BTreeMap<String, HashSet<usize>>{
+        &self.inner
     }
 }

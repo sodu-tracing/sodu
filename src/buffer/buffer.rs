@@ -102,6 +102,7 @@ impl Buffer {
     pub fn clear(&mut self) {
         self.position = 0;
     }
+
 }
 
 #[cfg(test)]

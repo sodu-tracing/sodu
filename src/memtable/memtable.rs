@@ -43,8 +43,7 @@ impl MemTable {
     /// put_span puts the span into the memtable.
     pub fn put_span(&mut self, span: Span) {
         self.span_freelist.clear();
-        self.index_store.set_current_trace(span.trace_id.clone());
-        encode_span(&span, &mut self.span_freelist,  &mut self.index_store);
+        let indices = encode_span(&span, &mut self.span_freelist);
         // TODO: check whether can it be done without freelist later. Whether worth to do the
         //  optimization.
         let offset = self.spans.write_slice(self.span_freelist.bytes_ref());
@@ -53,6 +52,9 @@ impl MemTable {
             start_ts: span.start_time_unix_nano,
             index: offset,
         };
+        for index in indices{
+            self.index_store.add_index(index, offset);
+        }
         self.sorted_span_pointer.insert(ptr);
     }
 
@@ -161,11 +163,10 @@ mod tests {
         assert_eq!(&span_trace_id[..], &trace_id);
         assert_eq!(spans.len(), 2);
         let mut buffer = Buffer::with_size(64 << 20);
-        let mut index_store = IndexStore::default();
-        encode_span(&span1, &mut buffer, &mut index_store);
+        encode_span(&span1, &mut buffer);
         assert_eq!(spans[0], buffer.bytes_ref());
         let mut buffer = Buffer::with_size(64 << 20);
-        encode_span(&span2, &mut buffer, &mut index_store);
+        encode_span(&span2, &mut buffer);
         assert_eq!(spans[1], buffer.bytes_ref());
 
         let (span_trace_id, spans) = itr.next().unwrap();
@@ -173,10 +174,15 @@ mod tests {
         assert_eq!(&span_trace_id[..], &trace_id);
         assert_eq!(spans.len(), 2);
         let mut buffer = Buffer::with_size(64 << 20);
-        encode_span(&span3, &mut buffer, &mut index_store);
+        encode_span(&span3, &mut buffer);
         assert_eq!(spans[0], buffer.bytes_ref());
         buffer.clear();
-        encode_span(&span4, &mut buffer, &mut index_store);
-        assert_eq!(spans[1], buffer.bytes_ref())
+        encode_span(&span4, &mut buffer);
+        assert_eq!(spans[1], buffer.bytes_ref());
+
+        assert_eq!(table.index_store.len(), 1);
+       for (_, list) in table.index_store.inner_ref(){
+           assert_eq!(list.len(), 4);
+       }
     }
 }
