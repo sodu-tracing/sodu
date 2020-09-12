@@ -2,6 +2,7 @@ use crate::buffer::buffer::Buffer;
 use crate::memtable::types::SpanPointer;
 use skiplist::OrderedSkipList;
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
 /// MemtableIterator is used to iterate all the traces in the table in
 /// a sorted order. It gives all the traces in sorted order and spans in
@@ -18,7 +19,7 @@ pub struct MemtableIterator<'a> {
 }
 
 impl<'a> Iterator for MemtableIterator<'a> {
-    type Item = (Vec<u8>, Vec<&'a [u8]>);
+    type Item = (Vec<u8>, Vec<&'a [u8]>, HashSet<String>);
     /// next iterates and gives the next trace.
     fn next(&mut self) -> Option<Self::Item> {
         if self.next_trace_idx >= self.ordered_spans.len() {
@@ -27,6 +28,7 @@ impl<'a> Iterator for MemtableIterator<'a> {
         // Now collect all spans of same traces.
         let mut trace_id = Vec::with_capacity(16);
         let mut spans = Vec::new();
+        let mut indices = HashSet::default();
         for i in self.next_trace_idx..self.ordered_spans.len() {
             let span_ptr = &self.ordered_spans[i];
             if trace_id.is_empty() {
@@ -36,6 +38,10 @@ impl<'a> Iterator for MemtableIterator<'a> {
                 trace_id.copy_from_slice(&span_ptr.trace_id);
                 spans.push(self.buffer.slice_at(span_ptr.index));
                 self.next_trace_idx = self.next_trace_idx + 1;
+                // Insert all the indexes for this trace.
+                for index in &span_ptr.indices{
+                    indices.insert(index.clone());
+                }
                 continue;
             }
             if trace_id.cmp(&span_ptr.trace_id) != Ordering::Equal {
@@ -43,7 +49,11 @@ impl<'a> Iterator for MemtableIterator<'a> {
             }
             spans.push(self.buffer.slice_at(span_ptr.index));
             self.next_trace_idx = self.next_trace_idx + 1;
+            // Insert all the indexes for this trace.
+            for index in &span_ptr.indices{
+                indices.insert(index.clone());
+            }
         }
-        Some((trace_id, spans))
+        Some((trace_id, spans, indices))
     }
 }

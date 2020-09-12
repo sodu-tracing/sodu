@@ -15,10 +15,12 @@ impl TableBuilder{
         }
     }
 
-    pub fn add_trace(&mut self, trace_id: Vec<u8>, spans: &[u8], indices: HashSet<String>){
+    pub fn add_trace(&mut self, trace_id: Vec<u8>, spans:Vec<&[u8]>, indices: HashSet<String>){
         let offset = self.buffer.size();
         self.buffer.write_raw_slice(&trace_id);
-        self.buffer.write_slice(spans);
+        for span in spans{
+            self.buffer.write_slice(span);
+        }
         for index in indices{
             if let Some(posting_list) = self.index_store.get_mut(&index){
                 posting_list.push(offset);
@@ -56,8 +58,35 @@ impl TableBuilder{
 #[cfg(test)]
 mod tests{
     use super::*;
+    use crate::memtable::memtable::tests::gen_span;
+    use crate::memtable::memtable::MemTable;
+
+    fn gen_table() -> MemTable{
+        let mut table = MemTable::new();
+        let mut trace_id: [u8; 16] = [0; 16];
+        trace_id[0] = 1;
+        // Let's insert trace 1;
+        let mut span1 = gen_span();
+        span1.trace_id = trace_id.clone().to_vec();
+        span1.start_time_unix_nano = 1;
+        table.put_span(span1.clone());
+        let mut span2 = gen_span();
+        span2.trace_id = trace_id.clone().to_vec();
+        span2.start_time_unix_nano = 2;
+        table.put_span(span2.clone());
+        table
+    }
     #[test]
     fn test_table_builder(){
+        let mut table = gen_table();
+        let mut itr = table.iter();
+        let (trace_id, spans, indices) = itr.next().unwrap();
+        assert_eq!(indices.len(), 1);
+
+        // Let's build the table for file format.
+        let mut builder = TableBuilder::from_buffer(Buffer::with_size(64 << 20));
+        builder.add_trace(trace_id, spans, indices);
+        let mut buffer = builder.finish();
 
     }
 }

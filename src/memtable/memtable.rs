@@ -75,14 +75,14 @@ impl MemTable {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
     use crate::proto::trace::{Span_Event, Span_Link};
     use protobuf::{Message, RepeatedField, SingularPtrField};
     use rand::Rng;
     use std::convert::TryInto;
-    fn gen_span() -> Span {
+    pub fn gen_span() -> Span {
         let mut span = Span::default();
         span.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
         span.parent_span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
@@ -151,7 +151,7 @@ mod tests {
         table.put_span(span4.clone());
 
         let mut itr = table.iter();
-        let (span_trace_id, spans) = itr.next().unwrap();
+        let (span_trace_id, spans, _) = itr.next().unwrap();
         trace_id[0] = 1;
         assert_eq!(&span_trace_id[..], &trace_id);
         assert_eq!(spans.len(), 2);
@@ -162,7 +162,7 @@ mod tests {
         encode_span(&span2, &mut buffer);
         assert_eq!(spans[1], buffer.bytes_ref());
 
-        let (span_trace_id, spans) = itr.next().unwrap();
+        let (span_trace_id, spans, _) = itr.next().unwrap();
         trace_id[0] = 2;
         assert_eq!(&span_trace_id[..], &trace_id);
         assert_eq!(spans.len(), 2);

@@ -6,7 +6,6 @@ mod encoder;
 mod memtable;
 mod proto;
 mod server;
-mod trace_writer;
 mod utils;
 mod table;
 
