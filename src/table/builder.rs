@@ -15,20 +15,20 @@ impl TableBuilder{
         }
     }
 
-    pub fn add_trace(&mut self, trace_id: Vec<u8>, spans:Vec<&[u8]>, indices: HashSet<String>){
+    pub fn add_trace(&mut self, trace_id: Vec<u8>, spans:Vec<&[u8]>, indices: HashSet<&String>){
         let offset = self.buffer.size();
         self.buffer.write_raw_slice(&trace_id);
         for span in spans{
             self.buffer.write_slice(span);
         }
         for index in indices{
-            if let Some(posting_list) = self.index_store.get_mut(&index){
+            if let Some(posting_list) = self.index_store.get_mut(index){
                 posting_list.push(offset);
                 continue
             }
             let mut posting_list = Vec::new();
             posting_list.push(offset);
-            self.index_store.insert(index, posting_list);
+            self.index_store.insert(index.clone(), posting_list);
         }
     }
 

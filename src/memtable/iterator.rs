@@ -19,7 +19,7 @@ pub struct MemtableIterator<'a> {
 }
 
 impl<'a> Iterator for MemtableIterator<'a> {
-    type Item = (Vec<u8>, Vec<&'a [u8]>, HashSet<String>);
+    type Item = (Vec<u8>, Vec<&'a [u8]>, HashSet<&'a String>);
     /// next iterates and gives the next trace.
     fn next(&mut self) -> Option<Self::Item> {
         if self.next_trace_idx >= self.ordered_spans.len() {
@@ -40,7 +40,7 @@ impl<'a> Iterator for MemtableIterator<'a> {
                 self.next_trace_idx = self.next_trace_idx + 1;
                 // Insert all the indexes for this trace.
                 for index in &span_ptr.indices{
-                    indices.insert(index.clone());
+                    indices.insert(index);
                 }
                 continue;
             }
@@ -51,7 +51,7 @@ impl<'a> Iterator for MemtableIterator<'a> {
             self.next_trace_idx = self.next_trace_idx + 1;
             // Insert all the indexes for this trace.
             for index in &span_ptr.indices{
-                indices.insert(index.clone());
+                indices.insert(index);
             }
         }
         Some((trace_id, spans, indices))
