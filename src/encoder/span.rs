@@ -40,25 +40,25 @@ pub fn encode_span(span: &Span, buffer: &mut Buffer) -> HashSet<String> {
     buffer.write_raw_slice(&span.end_time_unix_nano.to_be_bytes());
     buffer.write_raw_slice(&[span_kind_to_u8(&span.kind)]);
     buffer.write_slice(span.name.as_bytes());
-    let mut indices = HashSet::default();
-    encode_attributes(&span.attributes.as_ref().to_vec(), buffer, &mut indices);
-    encode_event(&span.events.to_vec(), buffer, &mut indices);
-    encode_links(&span.links.to_vec(), buffer, &mut indices);
+    let mut indices = HashSet::with_capacity(10);
+    encode_attributes(&span.attributes, buffer, &mut indices);
+    encode_event(&span.events, buffer, &mut indices);
+    encode_links(&span.links, buffer, &mut indices);
     indices
 }
 
-fn encode_event(events: &Vec<Span_Event>, buffer: &mut Buffer, indices: &mut HashSet<String>) {
+fn encode_event(events: &[Span_Event], buffer: &mut Buffer, indices: &mut HashSet<String>) {
     if events.len() == 0 {}
     for event in events {
         buffer.write_byte(EVENT_TYPE);
         buffer.write_raw_slice(&event.time_unix_nano.to_be_bytes());
         buffer.write_slice(event.name.as_bytes());
-        encode_attributes(&event.attributes.to_vec(), buffer, indices);
+        encode_attributes(&event.attributes, buffer, indices);
     }
 }
 
 /// encode_links encode span links.
-fn encode_links(links: &Vec<Span_Link>, buffer: &mut Buffer, indices: &mut HashSet<String>) {
+fn encode_links(links: &[Span_Link], buffer: &mut Buffer, indices: &mut HashSet<String>) {
     if links.len() == 0 {
         return;
     }
@@ -67,12 +67,12 @@ fn encode_links(links: &Vec<Span_Link>, buffer: &mut Buffer, indices: &mut HashS
         buffer.write_raw_slice(&link.trace_id);
         buffer.write_raw_slice(&link.span_id);
         buffer.write_raw_slice(link.trace_state.as_bytes());
-        encode_attributes(&link.attributes.to_vec(), buffer, indices);
+        encode_attributes(&link.attributes, buffer, indices);
     }
 }
 
 fn encode_attributes(
-    attributes: &Vec<KeyValue>,
+    attributes: &[KeyValue],
     buffer: &mut Buffer,
     indices: &mut HashSet<String>,
 ) {
@@ -98,25 +98,29 @@ fn encode_attributes(
                     continue;
                 }
                 buffer.write_byte(0);
-                indices.insert(create_index_key(&attribute.key, val));
+                create_index_key(&attribute.key, val);
+                //indices.insert(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::string_value(val) => {
                 buffer.write_byte(STRING_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.as_bytes());
-                indices.insert(create_index_key(&attribute.key, val));
+                create_index_key(&attribute.key, val);
+                //indices.insert(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::int_value(val) => {
                 buffer.write_byte(INT_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.to_be_bytes());
-                indices.insert(create_index_key(&attribute.key, val));
+                create_index_key(&attribute.key, val);
+                //indices.insert(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::double_value(val) => {
                 buffer.write_byte(DOUBLE_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.to_be_bytes());
-                indices.insert(create_index_key(&attribute.key, val));
+                create_index_key(&attribute.key, val);
+                //indices.insert(create_index_key(&attribute.key, val));
             }
             _ => {
                 panic!("undefined ub");
