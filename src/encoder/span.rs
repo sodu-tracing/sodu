@@ -71,11 +71,7 @@ fn encode_links(links: &[Span_Link], buffer: &mut Buffer, indices: &mut HashSet<
     }
 }
 
-fn encode_attributes(
-    attributes: &[KeyValue],
-    buffer: &mut Buffer,
-    indices: &mut HashSet<String>,
-) {
+fn encode_attributes(attributes: &[KeyValue], buffer: &mut Buffer, indices: &mut HashSet<String>) {
     if attributes.len() == 0 {
         return;
     }
@@ -98,29 +94,25 @@ fn encode_attributes(
                     continue;
                 }
                 buffer.write_byte(0);
-                create_index_key(&attribute.key, val);
-                //indices.insert(create_index_key(&attribute.key, val));
+                indices.insert(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::string_value(val) => {
                 buffer.write_byte(STRING_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.as_bytes());
-                create_index_key(&attribute.key, val);
-                //indices.insert(create_index_key(&attribute.key, val));
+                indices.insert(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::int_value(val) => {
                 buffer.write_byte(INT_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.to_be_bytes());
-                create_index_key(&attribute.key, val);
-                //indices.insert(create_index_key(&attribute.key, val));
+                indices.insert(create_index_key(&attribute.key, val));
             }
             AnyValue_oneof_value::double_value(val) => {
                 buffer.write_byte(DOUBLE_VAL_TYPE);
                 buffer.write_slice(&attribute.key.as_bytes());
                 buffer.write_slice(&val.to_be_bytes());
-                create_index_key(&attribute.key, val);
-                //indices.insert(create_index_key(&attribute.key, val));
+                indices.insert(create_index_key(&attribute.key, val));
             }
             _ => {
                 panic!("undefined ub");
@@ -143,11 +135,11 @@ fn span_kind_to_u8(kind: &Span_SpanKind) -> u8 {
 
 #[cfg(test)]
 pub mod tests {
+    use crate::buffer::buffer::Buffer;
+    use crate::encoder::span::encode_span;
     use crate::memtable::memtable::tests::gen_span;
     use protobuf::Message;
     use test::Bencher;
-    use crate::buffer::buffer::Buffer;
-    use crate::encoder::span::encode_span;
 
     #[bench]
     fn bench_protobuf_encoding(b: &mut Bencher) {

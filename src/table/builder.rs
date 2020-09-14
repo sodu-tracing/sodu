@@ -43,33 +43,36 @@ impl TableBuilder {
     /// which has file formatted span and indices.
     pub fn finish(mut self) -> Buffer {
         let mut posting_list_buffer = Buffer::with_size(400);
-        let mut offsets = Vec::with_capacity(2 * self.index_store.len());
+        let mut start_offset: u32 = 0;
         for (index, posting_list) in self.index_store {
             let offset = self.buffer.write_slice(index.as_bytes());
+            if start_offset == 0 {
+                // Store the offset of index store start. From there we can simply iterate to the
+                // end to build the index store.
+                start_offset = offset as u32;
+            }
             posting_list_buffer.clear();
             for trace_offset in posting_list {
+                let trace_offset = trace_offset as u32;
                 posting_list_buffer.write_raw_slice(&trace_offset.to_be_bytes());
             }
             self.buffer.write_slice(posting_list_buffer.bytes_ref());
-            offsets.push(offset);
         }
-        // Convert all the index offsets to buffer.
-        posting_list_buffer.clear();
-        for offset in offsets {
-            posting_list_buffer.write_raw_slice(&offset.to_be_bytes());
-        }
-        let offset = self.buffer.write_slice(posting_list_buffer.bytes_ref());
-        self.buffer.write_raw_slice(&offset.to_be_bytes());
+        self.buffer.write_raw_slice(&start_offset.to_be_bytes());
         self.buffer
     }
 }
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::memtable::memtable::tests::gen_span;
     use crate::memtable::memtable::MemTable;
+    use crate::utils::utils::create_index_key;
+    use tempfile::tempfile;
+    use crate::table::table::Table;
+    use std::io::Write;
 
-    fn gen_table() -> MemTable {
+    pub fn gen_table() -> MemTable {
         let mut table = MemTable::new();
         let mut trace_id: [u8; 16] = [0; 16];
         trace_id[0] = 1;
@@ -95,5 +98,12 @@ mod tests {
         let mut builder = TableBuilder::from_buffer(Buffer::with_size(64 << 20));
         builder.add_trace(trace_id, spans, indices);
         let mut buffer = builder.finish();
+        let mut tf = tempfile().unwrap();
+        tf.write_all(buffer.bytes_ref()).unwrap();
+        tf.flush();
+        let table = Table::from_file(tf);
+        assert_eq!(table.indices.len(), 1);
+        assert_eq!(table.indices[0].0, create_index_key(&"sup magic man".to_string(), "let's make it right".to_string()));
+        assert_eq!(table.indices[0].1, vec![0;1]);
     }
 }

@@ -28,7 +28,7 @@ impl<'a> Iterator for MemtableIterator<'a> {
         // Now collect all spans of same traces.
         let mut trace_id = Vec::with_capacity(16);
         let mut spans = Vec::new();
-        let mut indices = HashSet::default();
+        let mut indices = HashSet::with_capacity(10);
         for i in self.next_trace_idx..self.ordered_spans.len() {
             let span_ptr = &self.ordered_spans[i];
             if trace_id.is_empty() {

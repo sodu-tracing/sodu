@@ -19,3 +19,6 @@ unsigned-varint = "0.5.1"
 [build-dependencies]
 protobuf-codegen = "2.16"
 protoc-grpcio = "2.0"
+
+[dev-dependencies]
+tempfile = "3.1.0"

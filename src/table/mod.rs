@@ -1,2 +1,2 @@
 pub mod builder;
-mod table;
+pub mod table;
