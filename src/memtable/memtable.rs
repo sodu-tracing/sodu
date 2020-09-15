@@ -16,13 +16,7 @@ use crate::encoder::span::encode_span;
 use crate::memtable::iterator::MemtableIterator;
 use crate::memtable::types::SpanPointer;
 use crate::proto::trace::Span;
-use protobuf::Message;
 use skiplist::ordered_skiplist::OrderedSkipList;
-use std::cmp::Ordering;
-use std::collections::btree_map::BTreeMap;
-use std::collections::hash_map::RandomState;
-use std::collections::HashSet;
-use std::rc::Rc;
 
 /// MAX_MEMTABLE_SPAN_ENTRIES is an estimate that memtable can hold ablest 50k spans.
 const MAX_MEMTABLE_SPAN_ENTRIES: usize = 50_000;

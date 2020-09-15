@@ -26,9 +26,10 @@ pub fn create_index_key<T: Display>(k: &String, v: T) -> String {
 }
 
 /// bind_to_cpu helps to bind a cpu to the thread.
-pub fn bind_to_cpu(cpu: usize) -> Result<(), Box<Error>>{
+pub fn bind_to_cpu(cpu: usize) -> Result<(), Box<dyn Error>>{
     let mut cpuset = nix::sched::CpuSet::new();
     &cpuset.set(cpu as usize)?;
     let pid = nix::unistd::Pid::from_raw(0);
     nix::sched::sched_setaffinity(pid, &cpuset)?;
+    Ok(())
 }

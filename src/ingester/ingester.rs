@@ -79,8 +79,8 @@ impl Ingester {
     /// flush_memtable flushes the sorted memtable to the disk.
     fn flush_memtable(&mut self){
         // we'll always have index store let's just unwrap
-        let mut index_store = mem::replace(&mut self.builder_index_store, None).unwrap();
-        let mut buffer: Buffer;
+        let index_store = mem::replace(&mut self.builder_index_store, None).unwrap();
+        let buffer: Buffer;
         // Verify whether existing buffer is submitted to the iouring queue. If it's already
         // submitted let's just wait for that submitted process to complete to reuse the existing
         // buffer. Generally, we'll get the buffer as soon as we request for. Because, this
@@ -90,7 +90,7 @@ impl Ingester {
             // to reuse it.
             buffer = mem::replace(&mut self.submitted_builder_buffer, None).unwrap();
             let mut cq = self.iou.cq();
-            let mut cqe = cq
+            let cqe = cq
                 .wait_for_cqe()
                 .expect("error while waiting on completion queue");
             assert_eq!(cqe.user_data(), TABLE_USER_DATA);

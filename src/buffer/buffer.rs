@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use std::convert::TryInto;
 use unsigned_varint::{decode, encode};
 
 /// Buffer encloses Vec<u8> and gives utility functions which allows to
@@ -43,7 +42,7 @@ impl Buffer {
     /// write_slice write the slice length in the beginning and write the slice as well.
     pub fn write_slice(&mut self, buf: &[u8]) -> usize {
         let offset = self.position;
-        /// Write the len of the buffer first.
+        // Write the len of the buffer first.
         self.write_size(buf.len() as u32);
         if self.inner.len() - self.position < buf.len() {
             self.inner.reserve(1);
