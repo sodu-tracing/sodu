@@ -1,3 +1,16 @@
+// Copyright [2020] [Balaji Rajendran]
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 use crate::buffer::buffer::Buffer;
 use std::collections::btree_map::BTreeMap;
 use std::collections::HashSet;
@@ -21,6 +34,18 @@ impl TableBuilder {
         }
     }
 
+    pub fn build_with(
+        mut buffer: Buffer,
+        mut index_store: BTreeMap<String, Vec<usize>>,
+    ) -> TableBuilder {
+        buffer.clear();
+        index_store.clear();
+        TableBuilder {
+            buffer,
+            index_store,
+        }
+    }
+
     /// add_trace writes the given trace to the buffer.
     pub fn add_trace(&mut self, trace_id: Vec<u8>, spans: Vec<&[u8]>, indices: HashSet<&String>) {
         let offset = self.buffer.size();
@@ -41,10 +66,10 @@ impl TableBuilder {
 
     /// finish writes the inmemory index also to the file and returns the buffer
     /// which has file formatted span and indices.
-    pub fn finish(mut self) -> Buffer {
+    pub fn finish(mut self) -> (Buffer, BTreeMap<String, Vec<usize>>) {
         let mut posting_list_buffer = Buffer::with_size(400);
         let mut start_offset: u32 = 0;
-        for (index, posting_list) in self.index_store {
+        for (index, posting_list) in &self.index_store {
             let offset = self.buffer.write_slice(index.as_bytes());
             if start_offset == 0 {
                 // Store the offset of index store start. From there we can simply iterate to the
@@ -53,13 +78,13 @@ impl TableBuilder {
             }
             posting_list_buffer.clear();
             for trace_offset in posting_list {
-                let trace_offset = trace_offset as u32;
+                let trace_offset = *trace_offset as u32;
                 posting_list_buffer.write_raw_slice(&trace_offset.to_be_bytes());
             }
             self.buffer.write_slice(posting_list_buffer.bytes_ref());
         }
         self.buffer.write_raw_slice(&start_offset.to_be_bytes());
-        self.buffer
+        (self.buffer, self.index_store)
     }
 }
 #[cfg(test)]
@@ -67,10 +92,10 @@ pub mod tests {
     use super::*;
     use crate::memtable::memtable::tests::gen_span;
     use crate::memtable::memtable::MemTable;
-    use crate::utils::utils::create_index_key;
-    use tempfile::tempfile;
     use crate::table::table::Table;
+    use crate::utils::utils::create_index_key;
     use std::io::Write;
+    use tempfile::tempfile;
 
     pub fn gen_table() -> MemTable {
         let mut table = MemTable::new();
@@ -97,13 +122,19 @@ pub mod tests {
         // Let's build the table for file format.
         let mut builder = TableBuilder::from_buffer(Buffer::with_size(64 << 20));
         builder.add_trace(trace_id, spans, indices);
-        let mut buffer = builder.finish();
+        let (mut buffer, _) = builder.finish();
         let mut tf = tempfile().unwrap();
         tf.write_all(buffer.bytes_ref()).unwrap();
         tf.flush();
         let table = Table::from_file(tf);
         assert_eq!(table.indices.len(), 1);
-        assert_eq!(table.indices[0].0, create_index_key(&"sup magic man".to_string(), "let's make it right".to_string()));
-        assert_eq!(table.indices[0].1, vec![0;1]);
+        assert_eq!(
+            table.indices[0].0,
+            create_index_key(
+                &"sup magic man".to_string(),
+                "let's make it right".to_string()
+            )
+        );
+        assert_eq!(table.indices[0].1, vec![0; 1]);
     }
 }

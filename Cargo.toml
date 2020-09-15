@@ -15,6 +15,9 @@ flexi_logger = "0.15"
 rand = "0.7.3"
 skiplist = "0.3.0"
 unsigned-varint = "0.5.1"
+iou = {git= "https://github.com/withoutboats/iou"}
+crossbeam-channel = "0.4.4"
+nix = "0.18.0"
 
 [build-dependencies]
 protobuf-codegen = "2.16"
