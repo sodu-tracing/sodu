@@ -11,25 +11,4 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#![allow(dead_code)]
-#![feature(test)]
-extern crate test;
-
-mod buffer;
-mod encoder;
-mod ingester;
-mod memtable;
-mod options;
-mod proto;
-mod server;
-mod table;
-mod utils;
-
-fn main() {
-    let opt = options::options::Options::init();
-    // Initialize all the global helper utils.
-    utils::utils::init_all_utils();
-    let ingester_coordinator = ingester::coordinator::IngesterCoordinator::start_ingesters(&opt);
-    // Start the grpc server.
-    server::grpc::start_server(ingester_coordinator);
-}
+pub mod options;

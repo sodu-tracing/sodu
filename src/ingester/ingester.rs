@@ -15,19 +15,19 @@ use crate::buffer::buffer::Buffer;
 use crate::memtable::memtable::MemTable;
 use crate::proto::trace::Span;
 use crate::table::builder::TableBuilder;
+use crate::utils::placement::{CoreId, set_for_current};
+use crossbeam_channel::Receiver;
 use iou::IoUring;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::IoSlice;
 use std::mem;
 use std::os::unix::io::AsRawFd;
-use crossbeam_channel::Receiver;
-use crate::utils::utils::bind_to_cpu;
 use std::path;
 const TABLE_USER_DATA: u64 = 0xDEADBEEF;
 use std::thread;
 use std::thread::JoinHandle;
-
+use log::{ info};
 /// Ingester is used for ingesting spans from the collector. It's responsible for building memtable
 /// and flushing to the disk when the memtable is filled.
 pub struct Ingester {
@@ -77,7 +77,7 @@ impl Ingester {
     }
 
     /// flush_memtable flushes the sorted memtable to the disk.
-    fn flush_memtable(&mut self){
+    fn flush_memtable(&mut self) {
         // we'll always have index store let's just unwrap
         let index_store = mem::replace(&mut self.builder_index_store, None).unwrap();
         let buffer: Buffer;
@@ -143,12 +143,13 @@ impl Ingester {
 
     /// start starts the ingester and receive all the spans from the server and
     /// start writing to the memtable.
-    pub fn start(mut self, recv: Receiver<Vec<Span>>, cpu: usize) -> JoinHandle<()>{
-        thread::spawn(move ||{
+    pub fn start(mut self, recv: Receiver<Vec<Span>>, core_id: CoreId) -> JoinHandle<()> {
+        thread::spawn(move || {
+            info!("starting ingester for the cpu {:?}", &core_id);
             // bind the thead to the given cpu.
-            bind_to_cpu(cpu).unwrap();
+            set_for_current(core_id);
             // keep reading the spans and write it to the memtable.
-            loop{
+            loop {
                 let spans = recv.recv().unwrap();
                 self.write_spans(spans);
             }

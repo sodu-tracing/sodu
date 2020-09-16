@@ -17,7 +17,8 @@ skiplist = "0.3.0"
 unsigned-varint = "0.5.1"
 iou = {git= "https://github.com/withoutboats/iou"}
 crossbeam-channel = "0.4.4"
-nix = "0.18.0"
+libc = "0.2.77"
+structopt = "0.3" # Command line utility
 
 [build-dependencies]
 protobuf-codegen = "2.16"

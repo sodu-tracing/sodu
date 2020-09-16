@@ -13,8 +13,6 @@
 // limitations under the License.
 use flexi_logger::Logger;
 use std::fmt::Display;
-use std::error::Error;
-
 
 pub fn init_all_utils() {
     Logger::with_env_or_str("info").start().unwrap();
@@ -23,13 +21,4 @@ pub fn init_all_utils() {
 /// create_index_key creates index key. It's used as a primary key to store posting list.
 pub fn create_index_key<T: Display>(k: &String, v: T) -> String {
     format!("{}-{}", k, v)
-}
-
-/// bind_to_cpu helps to bind a cpu to the thread.
-pub fn bind_to_cpu(cpu: usize) -> Result<(), Box<dyn Error>>{
-    let mut cpuset = nix::sched::CpuSet::new();
-    &cpuset.set(cpu as usize)?;
-    let pid = nix::unistd::Pid::from_raw(0);
-    nix::sched::sched_setaffinity(pid, &cpuset)?;
-    Ok(())
 }
