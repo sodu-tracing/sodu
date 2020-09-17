@@ -42,7 +42,7 @@ impl IngesterCoordinator {
         let mut transport = Vec::new();
         // START ingester for all the core.
         for core_id in core_ids.clone() {
-            let ingester_path = opt.shard_path.join(format!("{:?}", &core_id));
+            let ingester_path = opt.shard_path.join(format!("{:?}", &core_id.id));
             fs::create_dir_all(&ingester_path).expect(&format!(
                 "unable to create ingester dir {:?}",
                 &ingester_path
@@ -68,7 +68,7 @@ impl IngesterCoordinator {
                     let mut hasher = DefaultHasher::new();
                     span.trace_id.hash(&mut hasher);
                     let batch = batches
-                        .get_mut(hasher.finish() as usize / self.core_ids.len())
+                        .get_mut(hasher.finish() as usize % self.core_ids.len())
                         .unwrap();
                     batch.push(span);
                 }
