@@ -57,6 +57,13 @@ impl Buffer {
 
     /// write_raw_slice write the given slice to the underlying buffer.
     pub fn write_raw_slice(&mut self, buf: &[u8]) {
+        if self.inner.len() - self.position < buf.len() {
+            self.inner.reserve(1);
+            unsafe {
+                self.inner.set_len(self.inner.capacity());
+            }
+            return self.write_raw_slice(buf);
+        }
         // Instead of extend use copy from slice. extend iterates and pushes. Which
         // leads to poor performance.
         self.inner[self.position..self.position + buf.len()].copy_from_slice(buf);

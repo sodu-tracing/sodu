@@ -38,8 +38,10 @@ const INT_VAL_TYPE: u8 = 9;
 const STRING_VAL_TYPE: u8 = 10;
 // Tells that span is ended.
 const SPAN_END: u8 = 11;
+
 /// encode_span encodes the given span into the buffer.
 pub fn encode_span(span: &Span, buffer: &mut Buffer) -> HashSet<String> {
+    buffer.write_raw_slice(&span.trace_id);
     buffer.write_raw_slice(&span.span_id);
     // Parent span id can be empty because first span don't have any parent
     // span id.

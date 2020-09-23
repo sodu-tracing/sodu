@@ -15,7 +15,7 @@ use flexi_logger::Logger;
 use std::fmt::Display;
 
 pub fn init_all_utils() {
-    Logger::with_env_or_str("info").start().unwrap();
+    Logger::with_env_or_str("debug").start().unwrap();
 }
 
 /// create_index_key creates index key. It's used as a primary key to store posting list.

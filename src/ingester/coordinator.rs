@@ -15,13 +15,12 @@
 use crate::ingester::ingester::Ingester;
 use crate::options::options::Options;
 use crate::proto::trace::{ResourceSpans, Span};
+use crate::utils::placement::{get_core_ids, CoreId};
 use crossbeam_channel::{bounded, Sender};
-use crate::utils::placement::{CoreId, get_core_ids};
+use log::info;
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
 use std::hash::{Hash, Hasher};
-use log::info;
-
 
 /// IngesterCoordinator is response for spinning multiple ingester according to the
 /// core count.
@@ -48,12 +47,15 @@ impl IngesterCoordinator {
                 &ingester_path
             ));
             // TODO: find the last table id.
-            let ingester = Ingester::new(ingester_path, 0);
+            let ingester = Ingester::new(ingester_path, 0, core_id.id);
             let (sender, receiver) = bounded(20);
             ingester.start(receiver, core_id);
             transport.push(sender);
         }
-        IngesterCoordinator { transport, core_ids }
+        IngesterCoordinator {
+            transport,
+            core_ids,
+        }
     }
 
     /// send_spans send the spans to the respective ingester.
@@ -64,7 +66,12 @@ impl IngesterCoordinator {
         for resource_span in resource_spans {
             for instrumental_library_span in resource_span.instrumentation_library_spans.into_vec()
             {
-                for span in instrumental_library_span.spans.into_vec() {
+                for mut span in instrumental_library_span.spans.into_vec() {
+                    // Add the resource attributes because, it contains attributes like
+                    // resource name and instance name.
+                    for resource_attribute in resource_span.resource.unwrap().attributes.to_vec() {
+                        span.attributes.push(resource_attribute.clone());
+                    }
                     let mut hasher = DefaultHasher::new();
                     span.trace_id.hash(&mut hasher);
                     let batch = batches

@@ -13,8 +13,9 @@ fn main() {
             "opentelemetry-proto/opentelemetry/proto/collector/trace/v1/trace_service.proto",
             "opentelemetry-proto/opentelemetry/proto/metrics/v1/metrics.proto",
             "opentelemetry-proto/opentelemetry/proto/collector/metrics/v1/metrics_service.proto",
+            "proto/types.proto",
         ],
-        &["opentelemetry-proto/"],
+        &["opentelemetry-proto/", "proto/"],
         "src/proto",
         Some(Customize {
             expose_fields: Some(true),

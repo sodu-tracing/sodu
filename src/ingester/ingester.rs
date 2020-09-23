@@ -15,7 +15,7 @@ use crate::buffer::buffer::Buffer;
 use crate::memtable::memtable::MemTable;
 use crate::proto::trace::Span;
 use crate::table::builder::TableBuilder;
-use crate::utils::placement::{CoreId, set_for_current};
+use crate::utils::placement::{set_for_current, CoreId};
 use crossbeam_channel::Receiver;
 use iou::IoUring;
 use std::collections::BTreeMap;
@@ -25,9 +25,9 @@ use std::mem;
 use std::os::unix::io::AsRawFd;
 use std::path;
 const TABLE_USER_DATA: u64 = 0xDEADBEEF;
+use log::{debug, info};
 use std::thread;
 use std::thread::JoinHandle;
-use log::{ info};
 /// Ingester is used for ingesting spans from the collector. It's responsible for building memtable
 /// and flushing to the disk when the memtable is filled.
 pub struct Ingester {
@@ -46,18 +46,22 @@ pub struct Ingester {
     /// builder_index_store is the index store for table building. It's a freelist it's meant
     /// to be reused by the table builder.
     builder_index_store: Option<BTreeMap<String, Vec<usize>>>,
+    shard_id: usize,
+    current_span_count: usize,
 }
 
 impl Ingester {
     /// new returns new ingester. which helps to ingest data to the disk.
-    pub fn new(shard_path: path::PathBuf, last_table_id: u64) -> Ingester {
+    pub fn new(shard_path: path::PathBuf, last_table_id: u64, shard_id: usize) -> Ingester {
         Ingester {
             memtable: MemTable::new(),
             next_table_id: last_table_id + 1,
             iou: IoUring::new(20).expect("unable to create iouring for the ingester"),
             submitted_builder_buffer: None,
             builder_index_store: Some(BTreeMap::default()),
+            current_span_count: 0,
             shard_path,
+            shard_id,
         }
     }
 
@@ -69,6 +73,13 @@ impl Ingester {
         // Anyways for the blocking calls, we are using io_uring.
         if self.memtable.span_size() >= 10 << 20 {
             self.flush_memtable();
+        }
+        self.current_span_count = self.current_span_count + &spans.len();
+        if self.current_span_count % 50 == 0 {
+            debug!(
+                "{} spans inserted for the memtable {} in shard {}",
+                &self.current_span_count, self.next_table_id, &self.shard_id
+            );
         }
         // Write all the incoming span to the memtable.
         for span in spans {
@@ -121,6 +132,13 @@ impl Ingester {
                 .sq()
                 .submit()
                 .expect("unable to submit submission entry");
+            debug!(
+                "flushing memtable {} with spans {} for the shard {}.",
+                &self.next_table_id - 1,
+                &self.current_span_count,
+                &self.shard_id
+            );
+            self.current_span_count = 0;
         }
         // Hold the reference of submitted buffer.
         self.submitted_builder_buffer = Some(builder_buffer);
@@ -135,7 +153,7 @@ impl Ingester {
     fn get_next_table_file(&mut self) -> File {
         let table_path = self
             .shard_path
-            .join(format!("{}.table", self.next_table_id));
+            .join(format!("{:?}.table", self.next_table_id));
         // Update the id for the next segment file.
         self.next_table_id = self.next_table_id + 1;
         File::create(&table_path).expect(&format!("unable to create segment file {:?}", table_path))

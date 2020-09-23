@@ -1,0 +1,24 @@
+message ChuckMetadata {
+  required uint64 min_start_ts = 1;
+  required uint64 max_start_ts = 2;
+  required uint32 offset = 3;
+  required uint32 length = 4;
+  repeated uint32 trace_offsets = 5;
+}
+
+message TraceIDOffset {
+  required uint32 offset = 1;
+  required uint32 trace_id = 2;
+}
+
+message TraceIds {
+  repeated uint64 trace_ids = 1;
+}
+
+message SegmentMetadata {
+  required uint64 min_start_ts  = 1;
+  required uint64 max_start_ts  = 2;
+  repeated ChuckMetadata chunks = 3;
+  map<string,TraceIds> index = 4;
+  required TraceIDOffset sorted_trace_ids = 5;
+}

@@ -36,7 +36,8 @@ impl TraceService for OpenTelemetryExportServer {
         req: ExportTraceServiceRequest,
         sink: UnarySink<ExportTraceServiceResponse>,
     ) {
-        self.ingester_coordinator.send_spans(req.resource_spans.into_vec());
+        self.ingester_coordinator
+            .send_spans(req.resource_spans.into_vec());
         let f = sink
             .success(ExportTraceServiceResponse::default())
             .map_err(move |e| error!("failed to reply {:?}", e))

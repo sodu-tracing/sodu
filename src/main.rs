@@ -21,14 +21,17 @@ mod ingester;
 mod memtable;
 mod options;
 mod proto;
+mod segment;
 mod server;
 mod table;
 mod utils;
 
+use log::debug;
 fn main() {
     let opt = options::options::Options::init();
     // Initialize all the global helper utils.
     utils::utils::init_all_utils();
+    debug!("running in debug mode");
     let ingester_coordinator = ingester::coordinator::IngesterCoordinator::start_ingesters(&opt);
     // Start the grpc server.
     server::grpc::start_server(ingester_coordinator);

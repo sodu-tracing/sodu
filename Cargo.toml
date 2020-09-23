@@ -19,6 +19,8 @@ iou = {git= "https://github.com/withoutboats/iou"}
 crossbeam-channel = "0.4.4"
 libc = "0.2.77"
 structopt = "0.3" # Command line utility
+crossbeam = "0.7.3"
+parking_lot = "0.11.0"
 
 [build-dependencies]
 protobuf-codegen = "2.16"
@@ -26,3 +28,4 @@ protoc-grpcio = "2.0"
 
 [dev-dependencies]
 tempfile = "3.1.0"
+num_cpus = "1.0"
