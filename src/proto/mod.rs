@@ -7,3 +7,4 @@ pub mod trace;
 pub mod trace_config;
 pub mod trace_service;
 pub mod trace_service_grpc;
+pub mod types;

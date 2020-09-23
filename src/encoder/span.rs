@@ -81,7 +81,7 @@ fn encode_links(links: &[Span_Link], buffer: &mut Buffer, indices: &mut HashSet<
         buffer.write_byte(LINK_TYPE);
         buffer.write_raw_slice(&link.trace_id);
         buffer.write_raw_slice(&link.span_id);
-        buffer.write_raw_slice(link.trace_state.as_bytes());
+        buffer.write_slice(link.trace_state.as_bytes());
         encode_attributes(&link.attributes, buffer, indices);
     }
 }

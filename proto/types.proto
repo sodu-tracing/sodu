@@ -8,7 +8,7 @@ message ChuckMetadata {
 
 message TraceIDOffset {
   required uint32 offset = 1;
-  required uint32 trace_id = 2;
+  required uint64 hashed_trace_id = 2;
 }
 
 message TraceIds {
