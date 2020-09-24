@@ -27,12 +27,21 @@ mod table;
 mod utils;
 
 use log::debug;
+use std::sync::Arc;
+use parking_lot::Mutex;
+
 fn main() {
     let opt = options::options::Options::init();
     // Initialize all the global helper utils.
     utils::utils::init_all_utils();
     debug!("running in debug mode");
-    let ingester_coordinator = ingester::coordinator::IngesterCoordinator::start_ingesters(&opt);
+    // Create the ingester instance.
+    let ingester = ingester::segment_ingester::SegmentIngester::new(opt.shard_path);
+    let protected_ingester = Arc::new(Mutex::new(ingester));
+    // run the the ingester.
+    let (coordinator, receiver) = ingester::coordinator::IngesterCoordinator::new();
+    let runner = ingester::ingester_runner::IngesterRunner::new(protected_ingester.clone());
+    runner.run(receiver);
     // Start the grpc server.
-    server::grpc::start_server(ingester_coordinator);
+    server::grpc::start_server(coordinator);
 }

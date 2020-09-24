@@ -1,3 +1,16 @@
+// Copyright [2020] [Balaji Rajendran]
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 use crate::buffer::buffer::Buffer;
 use crate::encoder::decoder::InplaceSpanDecoder;
 use crate::encoder::span::encode_span;
@@ -19,7 +32,7 @@ use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
-
+use std::fs;
 pub struct SegmentIngester {
     current_segment: Segment,
     buffered_segment: VecDeque<Segment>,
@@ -33,6 +46,23 @@ pub struct SegmentIngester {
 }
 
 impl SegmentIngester {
+
+    pub fn new(segments_path: PathBuf) -> SegmentIngester{
+        fs::create_dir_all(&segments_path).unwrap();
+        let iou = IoUring::new(50).unwrap();
+        SegmentIngester{
+            iou:iou,
+            segments_path:segments_path,
+            current_segment: Segment::new(),
+            span_buffer: Buffer::with_size(1<<20),
+            next_segment_id: 1,
+            submitted_builders: Vec::new(),
+            submitted_iou_ids: HashSet::new(),
+            builder_freelist: Vec::new(),
+            buffered_segment: VecDeque::new(),
+        }
+    }
+    
     pub fn push_span(&mut self, span: Span) {
         self.span_buffer.clear();
         let indices = encode_span(&span, &mut self.span_buffer);
@@ -136,7 +166,7 @@ impl SegmentIngester {
             // Assert all the pre committed conditions.
             assert_eq!(cqe.is_timeout(), false);
             assert_eq!(self.submitted_iou_ids.contains(&cqe.user_data()), true);
-            completed_segment_id.push(cqe.user_data());
+            completed_segment_id.insert(cqe.user_data());
         }
         assert_eq!(completed_segment_id.len(), self.submitted_iou_ids.len());
         self.submitted_iou_ids.clear();

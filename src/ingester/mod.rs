@@ -14,3 +14,4 @@
 pub mod coordinator;
 pub mod ingester;
 pub mod segment_ingester;
+pub mod ingester_runner;
