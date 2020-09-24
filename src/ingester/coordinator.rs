@@ -16,12 +16,11 @@ use crate::ingester::ingester::Ingester;
 use crate::options::options::Options;
 use crate::proto::trace::{ResourceSpans, Span};
 use crate::utils::placement::{get_core_ids, CoreId};
-use crossbeam_channel::{bounded, Sender, Receiver};
+use crossbeam_channel::{bounded, Receiver, Sender};
 use log::info;
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
 use std::hash::{Hash, Hasher};
-
 
 /// IngesterCoordinator is response for spinning multiple ingester according to the
 /// core count.
@@ -32,12 +31,9 @@ pub struct IngesterCoordinator {
 }
 
 impl IngesterCoordinator {
-
-    pub fn new() -> (IngesterCoordinator, Receiver<Vec<Span>>){
+    pub fn new() -> (IngesterCoordinator, Receiver<Vec<Span>>) {
         let (sender, receiver) = bounded(20);
-        (IngesterCoordinator{
-            transport: sender,
-        }, receiver)
+        (IngesterCoordinator { transport: sender }, receiver)
     }
 
     /// send_spans send the spans to the respective ingester.

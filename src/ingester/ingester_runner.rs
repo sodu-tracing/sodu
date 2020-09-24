@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
-use parking_lot::Mutex;
 use crate::ingester::segment_ingester::SegmentIngester;
-use std::thread;
 use crossbeam::crossbeam_channel::Receiver;
+use parking_lot::Mutex;
+use std::sync::Arc;
+use std::thread;
 
-use log::{info};
 use crate::proto::trace::Span;
+use log::info;
 
 /// IngesterRunner is responsible for ingesting spans to the segment.
 pub struct IngesterRunner {
@@ -27,27 +27,25 @@ pub struct IngesterRunner {
     /// there won't much on lock contention. Since, it's write heavy workload. Later this
     /// needs to be changed to lock free and per core per thread architecture. For simplicity
     /// sake. Just bear with this for now.
-    segment_ingester: Arc<Mutex<SegmentIngester>>
+    segment_ingester: Arc<Mutex<SegmentIngester>>,
 }
 
 impl IngesterRunner {
     /// new returns IngesterRunner.
-    pub fn new(segment_ingester: Arc<Mutex<SegmentIngester>>) -> IngesterRunner{
-        IngesterRunner{
-            segment_ingester
-        }
+    pub fn new(segment_ingester: Arc<Mutex<SegmentIngester>>) -> IngesterRunner {
+        IngesterRunner { segment_ingester }
     }
 
     /// run starts the ingester runner and get ready to start accepting spans from
     /// the collector.
     pub fn run(self, receiver: Receiver<Vec<Span>>) {
-        thread::spawn(move ||{
+        thread::spawn(move || {
             info!("spinning ingester runner");
-            loop{
+            loop {
                 // TODO: smart batching.
                 let spans = receiver.recv().unwrap();
                 let mut ingester = &mut self.segment_ingester.lock();
-                for span in spans{
+                for span in spans {
                     ingester.push_span(span);
                 }
             }

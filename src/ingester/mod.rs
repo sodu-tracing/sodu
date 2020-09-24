@@ -13,5 +13,5 @@
 // limitations under the License.
 pub mod coordinator;
 pub mod ingester;
-pub mod segment_ingester;
 pub mod ingester_runner;
+pub mod segment_ingester;

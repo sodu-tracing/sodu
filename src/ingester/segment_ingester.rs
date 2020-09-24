@@ -24,6 +24,7 @@ use log::{debug, info};
 use parking_lot::Mutex;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashSet, VecDeque};
+use std::fs;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::mem;
@@ -32,7 +33,6 @@ use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
-use std::fs;
 pub struct SegmentIngester {
     current_segment: Segment,
     buffered_segment: VecDeque<Segment>,
@@ -46,15 +46,14 @@ pub struct SegmentIngester {
 }
 
 impl SegmentIngester {
-
-    pub fn new(segments_path: PathBuf) -> SegmentIngester{
+    pub fn new(segments_path: PathBuf) -> SegmentIngester {
         fs::create_dir_all(&segments_path).unwrap();
         let iou = IoUring::new(50).unwrap();
-        SegmentIngester{
-            iou:iou,
-            segments_path:segments_path,
+        SegmentIngester {
+            iou: iou,
+            segments_path: segments_path,
             current_segment: Segment::new(),
-            span_buffer: Buffer::with_size(1<<20),
+            span_buffer: Buffer::with_size(1 << 20),
             next_segment_id: 1,
             submitted_builders: Vec::new(),
             submitted_iou_ids: HashSet::new(),
@@ -62,7 +61,7 @@ impl SegmentIngester {
             buffered_segment: VecDeque::new(),
         }
     }
-    
+
     pub fn push_span(&mut self, span: Span) {
         self.span_buffer.clear();
         let indices = encode_span(&span, &mut self.span_buffer);

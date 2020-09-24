@@ -27,8 +27,8 @@ mod table;
 mod utils;
 
 use log::debug;
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 
 fn main() {
     let opt = options::options::Options::init();

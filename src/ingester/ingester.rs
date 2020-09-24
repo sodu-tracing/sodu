@@ -26,9 +26,9 @@ use std::os::unix::io::AsRawFd;
 use std::path;
 const TABLE_USER_DATA: u64 = 0xDEADBEEF;
 use log::{debug, info};
+use std::fs;
 use std::thread;
 use std::thread::JoinHandle;
-use std::fs;
 /// Ingester is used for ingesting spans from the collector. It's responsible for building memtable
 /// and flushing to the disk when the memtable is filled.
 pub struct Ingester {
@@ -54,7 +54,6 @@ pub struct Ingester {
 impl Ingester {
     /// new returns new ingester. which helps to ingest data to the disk.
     pub fn new(shard_path: path::PathBuf, last_table_id: u64, shard_id: usize) -> Ingester {
-
         Ingester {
             memtable: MemTable::new(),
             next_table_id: last_table_id + 1,
