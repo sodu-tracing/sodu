@@ -3,14 +3,20 @@ use crate::encoder::decoder::InplaceSpanDecoder;
 use crate::encoder::span::encode_span;
 use crate::proto::trace::Span;
 use crate::segment::segment::Segment;
+use crate::segment::segment_builder::SegmentBuilder;
 use crossbeam::atomic::AtomicCell;
+use futures::io::IoSlice;
 use iou::IoUring;
+use log::{debug, info};
 use parking_lot::Mutex;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashSet, VecDeque};
+use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Sub;
+use std::os::unix::io::AsRawFd;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -19,6 +25,11 @@ pub struct SegmentIngester {
     buffered_segment: VecDeque<Segment>,
     span_buffer: Buffer,
     iou: IoUring,
+    next_segment_id: u64,
+    segments_path: PathBuf,
+    submitted_builders: Vec<SegmentBuilder>,
+    submitted_iou_ids: HashSet<u64>,
+    builder_freelist: Vec<SegmentBuilder>,
 }
 
 impl SegmentIngester {
@@ -63,7 +74,7 @@ impl SegmentIngester {
         let segment = Segment::new();
         let prev_segment = mem::replace(&mut self.current_segment, segment);
         // Add the previous segment to the buffered segment.
-        self.buffered_segment.push(prev_segment);
+        self.buffered_segment.push_back(prev_segment);
         // Find is there any buffered segment reached the elapsed time to
         // flush to the disk.
         loop {
@@ -75,9 +86,83 @@ impl SegmentIngester {
                 if elapsed.as_secs() / 60 < 5 {
                     break;
                 }
+                self.reclaim_submitted_builder_buffer();
                 // This segment is older than 5 minutes. So, let's flush this.
+                let mut builder = self.get_segment_builder();
+                for (start_ts, spans) in past_segment.iter() {
+                    builder.add_trace(start_ts, spans);
+                }
+                let buf = builder.finish_segment(past_segment.index());
+                let segment_file = self.get_next_segment_file();
+
+                unsafe {
+                    let mut sq = self.iou.sq();
+                    // TODO: Needs to handled carefully. We really need some throttling saying
+                    //  how many buffer can be flushed at a time.
+                    let mut sqe = sq
+                        .next_sqe()
+                        .expect("unable to get the next submission queue entry");
+                    let slice = [IoSlice::new(buf.bytes_ref())];
+                    sqe.prep_write_vectored(segment_file.as_raw_fd(), &slice, 0);
+                    sqe.set_user_data(self.next_segment_id - 1);
+                    self.iou
+                        .sq()
+                        .submit()
+                        .expect("unable to submit submission entry");
+                    debug!(
+                        "flushing segment {} with size {}",
+                        &self.next_segment_id - 1,
+                        buf.size()
+                    );
+                }
+                self.submitted_builders.push(builder);
             }
             break;
         }
+    }
+
+    fn reclaim_submitted_builder_buffer(&mut self) {
+        if self.submitted_iou_ids.len() == 0 {
+            return;
+        }
+        // Wait for the previous submitted request before building new builder. This
+        // allow us to throttle the builder memory and number of async request.
+        // Let's wait for all the submitted events. Actually we can do in one call,
+        // but still iou doesn't support io_uring_peek_batch_cqe.
+        let mut completed_segment_id = HashSet::with_capacity(self.submitted_iou_ids.len());
+        for _ in 0..self.submitted_iou_ids.len() {
+            let mut cq = self.iou.cq();
+            let cqe = cq.wait_for_cqe().expect("unable to wait for ceq event");
+            // Assert all the pre committed conditions.
+            assert_eq!(cqe.is_timeout(), false);
+            assert_eq!(self.submitted_iou_ids.contains(&cqe.user_data()), true);
+            completed_segment_id.push(cqe.user_data());
+        }
+        assert_eq!(completed_segment_id.len(), self.submitted_iou_ids.len());
+        self.submitted_iou_ids.clear();
+        loop {
+            if let Some(mut builder) = self.submitted_builders.pop() {
+                builder.clear();
+                self.builder_freelist.push(builder);
+                continue;
+            }
+            break;
+        }
+    }
+
+    fn get_segment_builder(&mut self) -> SegmentBuilder {
+        if let Some(builder) = self.builder_freelist.pop() {
+            return builder;
+        }
+        SegmentBuilder::new()
+    }
+
+    fn get_next_segment_file(&mut self) -> File {
+        let segment_path = self
+            .segments_path
+            .join(format!("{:?}.segment", self.next_segment_id));
+        self.next_segment_id += 1;
+        File::create(&segment_path)
+            .expect(&format!("unable to create segment file {:?}", segment_path))
     }
 }

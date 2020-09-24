@@ -69,8 +69,10 @@ impl IngesterCoordinator {
                 for mut span in instrumental_library_span.spans.into_vec() {
                     // Add the resource attributes because, it contains attributes like
                     // resource name and instance name.
-                    for resource_attribute in resource_span.resource.unwrap().attributes.to_vec() {
-                        span.attributes.push(resource_attribute.clone());
+                    for resource_attribute in
+                        resource_span.resource.clone().unwrap().attributes.to_vec()
+                    {
+                        span.attributes.push(resource_attribute);
                     }
                     let mut hasher = DefaultHasher::new();
                     span.trace_id.hash(&mut hasher);

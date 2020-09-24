@@ -1,6 +1,7 @@
 use crate::buffer::buffer::Buffer;
 use crate::encoder::decoder::InplaceSpanDecoder;
 use crate::proto::trace::Span;
+use crate::segment::segment_iterator::SegmentIterator;
 use std::collections::btree_map::BTreeMap;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
@@ -87,5 +88,16 @@ impl Segment {
 
     pub fn max_trace_start_ts(&self) -> u64 {
         self.max_start_ts
+    }
+    pub fn index(&self) -> &HashMap<String, HashSet<u64>> {
+        &self.index
+    }
+
+    pub fn iter(&self) -> SegmentIterator {
+        let mut trace_offsets = Vec::with_capacity(self.trace_offsets.len());
+        for (_, trace_offset) in &self.trace_offsets {
+            trace_offsets.push(trace_offset.clone());
+        }
+        SegmentIterator::new(trace_offsets, &self.buffer)
     }
 }
