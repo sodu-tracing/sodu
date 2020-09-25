@@ -2,6 +2,7 @@ use crate::buffer::buffer::Buffer;
 use crate::encoder::decoder::InplaceSpanDecoder;
 use crate::proto::trace::Span;
 use crate::segment::segment_iterator::SegmentIterator;
+use std::cmp::Reverse;
 use std::collections::btree_map::BTreeMap;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
@@ -98,6 +99,140 @@ impl Segment {
         for (_, trace_offset) in &self.trace_offsets {
             trace_offsets.push(trace_offset.clone());
         }
+        // sort the start_ts in descending order.
+        trace_offsets.sort_by(|a, b| b.0.cmp(&a.0));
         SegmentIterator::new(trace_offsets, &self.buffer)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::encoder::span::encode_span;
+    use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
+    use crate::proto::trace::{Span_Event, Span_Link};
+    use protobuf::{Message, RepeatedField, SingularPtrField};
+    use rand::Rng;
+
+    fn gen_trace(mut start_ts: u64) -> Vec<Span> {
+        let mut span = Span::default();
+        span.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.start_time_unix_nano = start_ts;
+        span.end_time_unix_nano = start_ts + 1;
+        let mut event = Span_Event::default();
+        let mut kv = KeyValue::default();
+        kv.key = String::from("sup magic man");
+        let mut val = AnyValue::default();
+        val.value = Some(AnyValue_oneof_value::string_value(String::from(
+            "let's make it right",
+        )));
+        kv.value = SingularPtrField::from(Some(val));
+        let mut attributes = vec![kv.clone()];
+        // Let's add more event.
+        attributes.push(kv.clone());
+        attributes.push(kv.clone());
+        attributes.push(kv.clone());
+        attributes.push(kv.clone());
+        span.attributes = RepeatedField::from(attributes.clone());
+        event.attributes = RepeatedField::from(attributes.clone());
+        span.events = RepeatedField::from(vec![event.clone()]);
+        span.events.push(event.clone());
+        span.events.push(event.clone());
+        span.events.push(event.clone());
+        span.events.push(event.clone());
+        span.events.push(event.clone());
+        let mut spans = Vec::new();
+        spans.push(span.clone());
+        start_ts += 2;
+        span.start_time_unix_nano = start_ts;
+        span.end_time_unix_nano = start_ts + 1;
+        span.parent_span_id = span.span_id.clone();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        spans.push(span.clone());
+        start_ts += 2;
+        span.start_time_unix_nano = start_ts;
+        span.end_time_unix_nano = start_ts + 1;
+        span.parent_span_id = span.span_id.clone();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        spans.push(span.clone());
+        start_ts += 2;
+        span.start_time_unix_nano = start_ts;
+        span.end_time_unix_nano = start_ts + 1;
+        span.parent_span_id = span.span_id.clone();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        spans.push(span.clone());
+        start_ts += 2;
+        span.start_time_unix_nano = start_ts;
+        span.end_time_unix_nano = start_ts + 1;
+        span.parent_span_id = span.span_id.clone();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        spans.push(span.clone());
+        spans
+    }
+
+    fn gen_traces() -> Vec<Vec<Span>> {
+        let mut start_ts = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let mut traces = Vec::new();
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        start_ts += 10;
+        traces.push(gen_trace(start_ts));
+        traces
+    }
+    #[test]
+    fn test_memory_segment() {
+        let mut traces = gen_traces();
+        let mut segment = Segment::new();
+        let mut buffer = Buffer::with_size(3 << 20);
+        for trace in traces.clone().into_iter() {
+            for span in trace.into_iter() {
+                let mut hasher = DefaultHasher::new();
+                span.trace_id.hash(&mut hasher);
+                let hashed_span_id = hasher.finish();
+                buffer.clear();
+                let indices = encode_span(&span, &mut buffer);
+                segment.put_span(
+                    hashed_span_id,
+                    buffer.bytes_ref(),
+                    span.start_time_unix_nano,
+                    indices,
+                );
+            }
+        }
+        assert_eq!(
+            segment.max_start_ts,
+            traces[traces.len() - 1][traces[0].len() - 1].start_time_unix_nano
+        );
+        assert_eq!(segment.min_start_ts, traces[0][0].start_time_unix_nano);
+        // Check the iterator whether traces are coming is same order.
+        let mut iterator = segment.iter();
+        traces.reverse();
+        for trace in traces.into_iter() {
+            let (start_ts, spans) = iterator.next().unwrap();
+            assert_eq!(start_ts, trace[0].start_time_unix_nano);
+            assert_eq!(spans.len(), trace.len());
+        }
     }
 }
