@@ -33,19 +33,37 @@ use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+/// SegmentIngester is used for ingesting incoming spans. It is responsible for handling the
+/// life cycle of ingestion.
 pub struct SegmentIngester {
+    /// current_segment is current segment where incoming span goes.
     current_segment: Segment,
+    /// buffered_segment contains filled segments. Once segment reached it's size threshold, then
+    /// it's been pushed to buffered_segment. Then it's been lazily flushed to disk once it
+    /// completes it's grace period.
     buffered_segment: VecDeque<Segment>,
+    /// span_buffer is the tmp buffer for encoding span.
     span_buffer: Buffer,
+    /// iou is the io_uring instance. This used to flush segments in an async fashion.
     iou: IoUring,
+    /// next_segment_id is the next segment id.
     next_segment_id: u64,
+    /// segments_path is the segment file directory.
     segments_path: PathBuf,
+    /// submitted_builders holds the segment build which is been submitted to the io_uring. This
+    /// is used to maintain the life time of the builder. So, that we don't drop the buffer before
+    /// the segment making into a segment file.
     submitted_builders: Vec<SegmentBuilder>,
+    /// submitted_iou_ids contains the set of io_uring submitted table builder segment's id. It helps
+    /// to verify theirs id on completion.
     submitted_iou_ids: HashSet<u64>,
+    /// builder_freelist contains iouring completed table builder. It can be reused for further
+    /// building segment.
     builder_freelist: Vec<SegmentBuilder>,
 }
 
 impl SegmentIngester {
+    /// new returns SegmentIngester instance.
     pub fn new(segments_path: PathBuf) -> SegmentIngester {
         fs::create_dir_all(&segments_path).unwrap();
         let iou = IoUring::new(50).unwrap();
@@ -62,6 +80,7 @@ impl SegmentIngester {
         }
     }
 
+    /// push span insert span to the ingester.
     pub fn push_span(&mut self, span: Span) {
         self.span_buffer.clear();
         let indices = encode_span(&span, &mut self.span_buffer);
@@ -94,7 +113,9 @@ impl SegmentIngester {
         );
     }
 
-    pub fn flush_segment_if_necessary(&mut self) {
+    /// flush_segment_if_necessary flushes the buffered segment. If it's crosses the grace period
+    /// time.
+    fn flush_segment_if_necessary(&mut self) {
         // Flush segments if necessary. Calculate whether the current segment reached the threshold
         // size
         if self.current_segment.segment_size() < 64 << 20 {
@@ -152,6 +173,7 @@ impl SegmentIngester {
         }
     }
 
+    /// reclaim_submitted_builder_buffer reclaims the submitted builder buffer after it's completion.
     fn reclaim_submitted_builder_buffer(&mut self) {
         if self.submitted_iou_ids.len() == 0 {
             return;
@@ -181,6 +203,8 @@ impl SegmentIngester {
         }
     }
 
+    /// get_segment_builder returns segment builder if it's in the freelist. Otherwise, it creates
+    /// new SegmentBuilder.
     fn get_segment_builder(&mut self) -> SegmentBuilder {
         if let Some(builder) = self.builder_freelist.pop() {
             return builder;
@@ -188,6 +212,7 @@ impl SegmentIngester {
         SegmentBuilder::new()
     }
 
+    /// get_next_segment file return's next segment file.
     fn get_next_segment_file(&mut self) -> File {
         let segment_path = self
             .segments_path
