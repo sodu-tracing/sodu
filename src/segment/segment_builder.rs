@@ -118,6 +118,10 @@ impl SegmentBuilder {
     }
 
     pub fn finish_segment(&mut self, index: &HashMap<String, HashSet<u64>>) -> &Buffer {
+        // finish the current chunk.
+        if self.current_chunk_offset != self.buffer.size() {
+            self.finish_chunk();
+        }
         let mut segment_metadata = SegmentMetadata::default();
         // build segment index.
         let mut segment_index = HashMap::default();
@@ -133,6 +137,10 @@ impl SegmentBuilder {
         segment_metadata.set_index(segment_index);
         segment_metadata.set_min_start_ts(self.chunks[0].get_min_start_ts());
         segment_metadata.set_max_start_ts(self.chunks[self.chunks.len() - 1].get_max_start_ts());
+        self.trace_offsets
+            .sort_by(|a, b| a.get_hashed_trace_id().cmp(&b.get_hashed_trace_id()));
+        let trace_offsets = mem::replace(&mut self.trace_offsets, Vec::new());
+        segment_metadata.set_sorted_trace_ids(RepeatedField::from(trace_offsets));
         let chunks = mem::replace(&mut self.chunks, Vec::new());
         segment_metadata.set_chunks(RepeatedField::from(chunks));
         // write the metadata to the buffer.
@@ -146,6 +154,9 @@ impl SegmentBuilder {
             &mut segment_metadata.chunks,
             RepeatedField::from(Vec::new()),
         );
+        let trace_offsets =
+            mem::replace(&mut segment_metadata.sorted_trace_ids, RepeatedField::new());
+        self.trace_offsets = trace_offsets.to_vec();
         self.chunks = chunks.to_vec();
         &self.buffer
     }

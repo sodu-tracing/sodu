@@ -32,7 +32,7 @@ use std::ops::Sub;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 pub struct SegmentIngester {
     current_segment: Segment,
     buffered_segment: VecDeque<Segment>,
@@ -97,7 +97,7 @@ impl SegmentIngester {
     pub fn flush_segment_if_necessary(&mut self) {
         // Flush segments if necessary. Calculate whether the current segment reached the threshold
         // size
-        if self.current_segment.segment_size() >= 64 << 20 {
+        if self.current_segment.segment_size() < 64 << 20 {
             return;
         }
         let segment = Segment::new();
@@ -110,8 +110,9 @@ impl SegmentIngester {
             if let Some(past_segment) = self.buffered_segment.pop_front() {
                 // Check whether the past_segment older than five minutes. If's older than five minutes
                 // then flush to the disk.
-                let max_start_time = Duration::from_nanos(past_segment.max_trace_start_ts());
-                let elapsed = SystemTime::now().sub(max_start_time).elapsed().unwrap();
+                let segment_finish_time =
+                    UNIX_EPOCH + Duration::from_nanos(past_segment.max_trace_start_ts());
+                let elapsed = segment_finish_time.elapsed().unwrap();
                 if elapsed.as_secs() / 60 < 5 {
                     break;
                 }
@@ -134,6 +135,7 @@ impl SegmentIngester {
                     let slice = [IoSlice::new(buf.bytes_ref())];
                     sqe.prep_write_vectored(segment_file.as_raw_fd(), &slice, 0);
                     sqe.set_user_data(self.next_segment_id - 1);
+                    self.submitted_iou_ids.insert(self.next_segment_id - 1);
                     self.iou
                         .sq()
                         .submit()
@@ -193,5 +195,47 @@ impl SegmentIngester {
         self.next_segment_id += 1;
         File::create(&segment_path)
             .expect(&format!("unable to create segment file {:?}", segment_path))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::buffer::buffer::tests::get_buffer;
+    use crate::segment::segment::tests::gen_traces;
+    use std::fs::metadata;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_segment_ingester() {
+        let dir = tempdir().unwrap();
+        let tmp_path = dir.path();
+        let mut ingester = SegmentIngester::new(tmp_path.clone().to_path_buf());
+        // Generate start_ts as 1 hour back.
+        let start_ts = SystemTime::now()
+            .sub(Duration::from_secs(60 * 60))
+            .elapsed()
+            .unwrap()
+            .as_secs();
+        let traces = gen_traces(start_ts);
+        for trace in traces {
+            for span in trace {
+                ingester.push_span(span);
+            }
+        }
+
+        let mut dummy_buffer = get_buffer(66 << 20);
+        let dummy_segment = Segment::from_buffer(dummy_buffer);
+        let segment = mem::replace(&mut ingester.current_segment, dummy_segment);
+        ingester.buffered_segment.push_back(segment);
+        // flush the past segment.
+        ingester.flush_segment_if_necessary();
+        assert_eq!(ingester.submitted_iou_ids.len(), 1);
+        // reclaim the submitted buffer.
+        ingester.reclaim_submitted_builder_buffer();
+        assert_eq!(ingester.builder_freelist.len(), 1);
+        // file should have some data.
+        let metadata = metadata(tmp_path.join("1.segment")).unwrap();
+        assert!(metadata.len() > 70);
     }
 }

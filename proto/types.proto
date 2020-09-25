@@ -20,5 +20,5 @@ message SegmentMetadata {
   required uint64 max_start_ts  = 2;
   repeated ChuckMetadata chunks = 3;
   map<string,TraceIds> index = 4;
-  required TraceIDOffset sorted_trace_ids = 5;
+  repeated TraceIDOffset sorted_trace_ids = 5;
 }

@@ -36,6 +36,16 @@ impl Segment {
         }
     }
 
+    pub fn from_buffer(buffer: Buffer) -> Segment {
+        Segment {
+            buffer: buffer,
+            index: HashMap::default(),
+            trace_offsets: HashMap::default(),
+            min_start_ts: u64::MAX,
+            max_start_ts: 0,
+        }
+    }
+
     /// put_span add span to the in-memory buffer and index the spans based on
     /// the given indices.
     pub fn put_span(
@@ -106,7 +116,7 @@ impl Segment {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::encoder::span::encode_span;
     use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
@@ -171,11 +181,7 @@ mod tests {
         spans
     }
 
-    fn gen_traces() -> Vec<Vec<Span>> {
-        let mut start_ts = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+    pub fn gen_traces(mut start_ts: u64) -> Vec<Vec<Span>> {
         let mut traces = Vec::new();
         start_ts += 10;
         traces.push(gen_trace(start_ts));
@@ -203,7 +209,11 @@ mod tests {
     }
     #[test]
     fn test_memory_segment() {
-        let mut traces = gen_traces();
+        let start_ts = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let mut traces = gen_traces(start_ts);
         let mut segment = Segment::new();
         let mut buffer = Buffer::with_size(3 << 20);
         for trace in traces.clone().into_iter() {

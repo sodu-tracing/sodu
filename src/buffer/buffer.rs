@@ -126,8 +126,14 @@ impl Buffer {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
+
+    pub fn get_buffer(size: usize) -> Buffer {
+        let mut buffer = Buffer::with_size(10);
+        buffer.position = size;
+        buffer
+    }
     #[test]
     fn test_buffer() {
         // Testing with write_slice
