@@ -82,6 +82,7 @@ impl SegmentIngester {
 
     /// push span insert span to the ingester.
     pub fn push_span(&mut self, span: Span) {
+        self.flush_segment_if_necessary();
         self.span_buffer.clear();
         let indices = encode_span(&span, &mut self.span_buffer);
         // Calculate hash_id for the given span
@@ -115,12 +116,13 @@ impl SegmentIngester {
 
     /// flush_segment_if_necessary flushes the buffered segment. If it's crosses the grace period
     /// time.
-    fn flush_segment_if_necessary(&mut self) {
+     fn flush_segment_if_necessary(&mut self) {
         // Flush segments if necessary. Calculate whether the current segment reached the threshold
         // size
-        if self.current_segment.segment_size() < 64 << 20 {
+        if self.current_segment.segment_size() < 62 << 20 {
             return;
         }
+        debug!("current segment finished with {} spans. moving to buffer", self.current_segment.num_spans());
         let segment = Segment::new();
         let prev_segment = mem::replace(&mut self.current_segment, segment);
         // Add the previous segment to the buffered segment.

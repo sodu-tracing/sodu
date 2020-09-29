@@ -22,6 +22,8 @@ pub struct Segment {
     min_start_ts: u64,
     /// max_start_ts gives the maximum start_ts of this segment.
     max_start_ts: u64,
+    /// num_of_spans gives the number of span in the segment.
+    num_of_spans: u64,
 }
 
 impl Segment {
@@ -33,6 +35,7 @@ impl Segment {
             trace_offsets: HashMap::default(),
             min_start_ts: u64::MAX,
             max_start_ts: 0,
+            num_of_spans: 0,
         }
     }
 
@@ -43,6 +46,7 @@ impl Segment {
             trace_offsets: HashMap::default(),
             min_start_ts: u64::MAX,
             max_start_ts: 0,
+            num_of_spans: 0,
         }
     }
 
@@ -55,6 +59,7 @@ impl Segment {
         start_ts: u64,
         indices: HashSet<String>,
     ) {
+        self.num_of_spans+=1;
         // Update the timestamp of the current segment.
         if self.min_start_ts > start_ts {
             self.min_start_ts = start_ts;
@@ -95,6 +100,10 @@ impl Segment {
     /// This is used to cut the current segment.
     pub fn segment_size(&self) -> usize {
         self.buffer.size()
+    }
+
+    pub fn num_spans(&self) -> u64 {
+        self.num_of_spans
     }
 
     pub fn max_trace_start_ts(&self) -> u64 {

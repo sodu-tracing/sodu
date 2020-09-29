@@ -18,21 +18,24 @@ use crate::proto::trace::{ResourceSpans, Span};
 use crate::utils::placement::{get_core_ids, CoreId};
 use crossbeam_channel::{bounded, Receiver, Sender};
 use log::info;
+use std::sync::mpsc;
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
 use std::hash::{Hash, Hasher};
+use log::{warn};
+use crate::ingester::ingester_runner::IngesterRunnerRequest;
 
 /// IngesterCoordinator is response for spinning multiple ingester according to the
 /// core count.
 #[derive(Clone)]
 pub struct IngesterCoordinator {
     /// transport of the ingester.
-    transport: Sender<Vec<Span>>,
+    transport: Sender<IngesterRunnerRequest>,
 }
 
 impl IngesterCoordinator {
-    pub fn new() -> (IngesterCoordinator, Receiver<Vec<Span>>) {
-        let (sender, receiver) = bounded(20);
+    pub fn new() -> (IngesterCoordinator, Receiver<IngesterRunnerRequest>) {
+        let (sender, receiver) = bounded(5);
         (IngesterCoordinator { transport: sender }, receiver)
     }
 
@@ -56,7 +59,16 @@ impl IngesterCoordinator {
                 }
             }
         }
+        let (sender, receiver) = mpsc::channel();
+        let req = IngesterRunnerRequest{
+            spans: spans,
+            done: sender,
+        };
         // Send the the batched spans to the respective ingester.
-        self.transport.send(spans).unwrap();
+        if let Err(e) = self.transport.try_send(req){
+            warn!("ingester unable to handle incoming request. {} spans are rejected", e.into_inner().spans.len())
+        }
+        // wait for the request to go through the ingester.
+        receiver.recv().unwrap();
     }
 }

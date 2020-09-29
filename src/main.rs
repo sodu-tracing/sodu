@@ -34,7 +34,7 @@ fn main() {
     let opt = options::options::Options::init();
     // Initialize all the global helper utils.
     utils::utils::init_all_utils();
-    debug!("running in debug mode");
+    debug!("running in debug mode yo man");
     // Create the ingester instance.
     let ingester = ingester::segment_ingester::SegmentIngester::new(opt.shard_path);
     let protected_ingester = Arc::new(Mutex::new(ingester));

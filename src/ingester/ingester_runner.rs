@@ -14,13 +14,18 @@
 
 use crate::ingester::segment_ingester::SegmentIngester;
 use crossbeam::crossbeam_channel::Receiver;
+use std::sync::mpsc;
 use parking_lot::Mutex;
 use std::sync::Arc;
 use std::thread;
-
 use crate::proto::trace::Span;
-use log::info;
+use log::{info, debug, warn};
+use futures::SinkExt;
 
+pub struct IngesterRunnerRequest {
+    pub spans: Vec<Span>,
+    pub done: mpsc::Sender<u8>,
+}
 /// IngesterRunner is responsible for ingesting spans to the segment.
 pub struct IngesterRunner {
     /// segment_ingester is used to ingest spans. Now, it's protected by mutex. Considering
@@ -38,16 +43,16 @@ impl IngesterRunner {
 
     /// run starts the ingester runner and get ready to start accepting spans from
     /// the collector.
-    pub fn run(self, receiver: Receiver<Vec<Span>>) {
+    pub fn run(self, receiver: Receiver<IngesterRunnerRequest>) {
         thread::spawn(move || {
             info!("spinning ingester runner");
             loop {
-                // TODO: smart batching.
-                let spans = receiver.recv().unwrap();
+                let req = receiver.recv().unwrap();
                 let mut ingester = &mut self.segment_ingester.lock();
-                for span in spans {
+                for span in req.spans {
                     ingester.push_span(span);
                 }
+                req.done.send(0).map_err(|_| {warn!("unable to send done to the ingester request")});
             }
         });
     }

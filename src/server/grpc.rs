@@ -53,7 +53,7 @@ pub fn start_server(ingester_coordinator: IngesterCoordinator) {
     let service = create_trace_service(OpenTelemetryExportServer {
         ingester_coordinator,
     });
-    let quota = ResourceQuota::new(None).resize_memory(1024 * 1024);
+    let quota = ResourceQuota::new(None).resize_memory(100 <<20);
     let ch_builder = ChannelBuilder::new(env.clone()).set_resource_quota(quota);
 
     let mut server = ServerBuilder::new(env)
