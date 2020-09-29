@@ -4,6 +4,7 @@
 name = "aakal"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "crossbeam",
  "crossbeam-channel",
  "flexi_logger",
@@ -56,6 +57,12 @@ checksum = "ee49baf6cb617b853aa8d93bf420db2383fab46d314482ca2803b40d5fde979b"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "anyhow"
+version = "1.0.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b602bfe940d21c130f3895acd65221e8a61270debe89d628b9cb4e3ccb8569b"
 
 [[package]]
 name = "atty"

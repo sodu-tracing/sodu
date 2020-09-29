@@ -116,13 +116,16 @@ impl SegmentIngester {
 
     /// flush_segment_if_necessary flushes the buffered segment. If it's crosses the grace period
     /// time.
-     fn flush_segment_if_necessary(&mut self) {
+    fn flush_segment_if_necessary(&mut self) {
         // Flush segments if necessary. Calculate whether the current segment reached the threshold
         // size
         if self.current_segment.segment_size() < 62 << 20 {
             return;
         }
-        debug!("current segment finished with {} spans. moving to buffer", self.current_segment.num_spans());
+        debug!(
+            "current segment finished with {} spans. moving to buffer",
+            self.current_segment.num_spans()
+        );
         let segment = Segment::new();
         let prev_segment = mem::replace(&mut self.current_segment, segment);
         // Add the previous segment to the buffered segment.
@@ -155,6 +158,7 @@ impl SegmentIngester {
                     let mut sqe = sq
                         .next_sqe()
                         .expect("unable to get the next submission queue entry");
+                    // Verify whether is it necessary to hold the reference of slice.
                     let slice = [IoSlice::new(buf.bytes_ref())];
                     sqe.prep_write_vectored(segment_file.as_raw_fd(), &slice, 0);
                     sqe.set_user_data(self.next_segment_id - 1);

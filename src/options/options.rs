@@ -20,10 +20,12 @@ pub struct Options {
     /// Output directory
     #[structopt(short, long, parse(from_os_str), default_value = "./akkal")]
     pub dir: PathBuf,
-
     /// shard_path contains the path for all the shard ingested files.
     #[structopt(skip)]
     pub shard_path: PathBuf,
+    /// wal_path contains all the wal related files.
+    #[structopt(skip)]
+    pub wal_path: PathBuf,
 }
 
 impl Options {
@@ -32,6 +34,9 @@ impl Options {
         // Create the shard path.
         opt.shard_path = opt.dir.join("shard");
         fs::create_dir_all(&opt.shard_path).expect("unable to create shard path");
+        // Create the wal path.
+        opt.wal_path = opt.dir.joun("wal");
+        fs::create_dir_all(&opt.wal_path).expect("unable to create shard path");
         opt
     }
 }

@@ -13,6 +13,7 @@
 // limitations under the License.
 #![allow(dead_code)]
 #![feature(test)]
+#![feature(with_options)]
 extern crate test;
 
 mod buffer;
@@ -25,6 +26,7 @@ mod segment;
 mod server;
 mod table;
 mod utils;
+mod wal;
 
 use log::debug;
 use parking_lot::Mutex;
