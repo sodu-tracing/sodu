@@ -13,26 +13,19 @@
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
 use crate::encoder::decoder::InplaceSpanDecoder;
-use crate::encoder::span::encode_span;
-use crate::proto::trace::Span;
 use crate::segment::segment::Segment;
 use crate::segment::segment_builder::SegmentBuilder;
-use crossbeam::atomic::AtomicCell;
+use crate::wal::wal::EncodedRequest;
 use futures::io::IoSlice;
 use iou::IoUring;
-use log::{debug, info};
-use parking_lot::Mutex;
-use std::collections::hash_map::DefaultHasher;
+use log::debug;
 use std::collections::{HashSet, VecDeque};
 use std::fs;
 use std::fs::File;
-use std::hash::{Hash, Hasher};
 use std::mem;
-use std::ops::Sub;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 /// SegmentIngester is used for ingesting incoming spans. It is responsible for handling the
 /// life cycle of ingestion.
 pub struct SegmentIngester {
@@ -81,14 +74,11 @@ impl SegmentIngester {
     }
 
     /// push span insert span to the ingester.
-    pub fn push_span(&mut self, span: Span) {
+    pub fn push_span(&mut self, wal_id: u64, req: EncodedRequest) {
         self.flush_segment_if_necessary();
         self.span_buffer.clear();
-        let indices = encode_span(&span, &mut self.span_buffer);
-        // Calculate hash_id for the given span
-        let mut hasher = DefaultHasher::new();
-        span.trace_id.hash(&mut hasher);
-        let hashed_trace_id = hasher.finish();
+        let inplace_decoder = InplaceSpanDecoder(req.encoded_span);
+        let hashed_trace_id = inplace_decoder.hashed_trace_id();
         // Find that is the incoming span is part of
         // previous segment trace.
         for segment in &mut self.buffered_segment {
@@ -97,21 +87,11 @@ impl SegmentIngester {
             }
             // Incoming trace is part of previous trace.
             // So, let's update it.
-            segment.put_span(
-                hashed_trace_id,
-                self.span_buffer.bytes_ref(),
-                span.start_time_unix_nano,
-                indices,
-            );
+            segment.put_delayed_span(hashed_trace_id, wal_id, req);
             return;
         }
         // Incoming span is part of current segment. So, let's just add there.
-        self.current_segment.put_span(
-            hashed_trace_id,
-            self.span_buffer.bytes_ref(),
-            span.start_time_unix_nano,
-            indices,
-        );
+        self.current_segment.put_span(hashed_trace_id, wal_id, req);
     }
 
     /// flush_segment_if_necessary flushes the buffered segment. If it's crosses the grace period

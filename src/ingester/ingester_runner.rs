@@ -13,14 +13,14 @@
 // limitations under the License.
 
 use crate::ingester::segment_ingester::SegmentIngester;
+use crate::proto::trace::Span;
+use crate::wal::wal::Wal;
 use crossbeam::crossbeam_channel::Receiver;
-use std::sync::mpsc;
+use log::{info, warn};
 use parking_lot::Mutex;
+use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
-use crate::proto::trace::Span;
-use log::{info, debug, warn};
-use futures::SinkExt;
 
 pub struct IngesterRunnerRequest {
     pub spans: Vec<Span>,
@@ -33,26 +33,37 @@ pub struct IngesterRunner {
     /// needs to be changed to lock free and per core per thread architecture. For simplicity
     /// sake. Just bear with this for now.
     segment_ingester: Arc<Mutex<SegmentIngester>>,
+    wal: Wal,
 }
 
 impl IngesterRunner {
     /// new returns IngesterRunner.
-    pub fn new(segment_ingester: Arc<Mutex<SegmentIngester>>) -> IngesterRunner {
-        IngesterRunner { segment_ingester }
+    pub fn new(segment_ingester: Arc<Mutex<SegmentIngester>>, wal: Wal) -> IngesterRunner {
+        IngesterRunner {
+            segment_ingester,
+            wal: wal,
+        }
     }
 
     /// run starts the ingester runner and get ready to start accepting spans from
     /// the collector.
-    pub fn run(self, receiver: Receiver<IngesterRunnerRequest>) {
+    pub fn run(mut self, receiver: Receiver<IngesterRunnerRequest>) {
         thread::spawn(move || {
             info!("spinning ingester runner");
             loop {
                 let req = receiver.recv().unwrap();
-                let mut ingester = &mut self.segment_ingester.lock();
+                self.wal.wait_for_submitted_wal_span();
+                self.wal.change_wal_if_neccessary();
+                let current_wal_id = self.wal.current_wal_id();
+                let ingester = &mut self.segment_ingester.lock();
                 for span in req.spans {
-                    ingester.push_span(span);
+                    let encoded_req = self.wal.write_spans(span);
+                    ingester.push_span(current_wal_id, encoded_req);
                 }
-                req.done.send(0).map_err(|_| {warn!("unable to send done to the ingester request")});
+                if let Err(e) = req.done.send(0) {
+                    warn!("unable to send done to the ingester request {:?}", e);
+                }
+                self.wal.submit_buffer_to_iou();
             }
         });
     }

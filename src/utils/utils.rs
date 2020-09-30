@@ -27,10 +27,10 @@ pub fn create_index_key<T: Display>(k: &String, v: T) -> String {
 
 /// read_files_in_dir gives the list of files in a directory with the given extension.
 pub fn read_files_in_dir(path: &PathBuf, ext: &str) -> Result<Vec<PathBuf>> {
-    let entries = read_dir(path).with_context(format!("unable to read file in dir {:?}", path))?;
+    let entries = read_dir(path).context(format!("unable to read file in dir {:?}", path))?;
     let mut entries_path = Vec::new();
     for entry in entries {
-        let entry = entry.with_context(format!("unable to get file entry at {:?}", path))?;
+        let entry = entry.context(format!("unable to get file entry at {:?}", path))?;
         let path = entry.path();
         // Skip all the child directories.
         if path.is_dir() {
@@ -38,7 +38,7 @@ pub fn read_files_in_dir(path: &PathBuf, ext: &str) -> Result<Vec<PathBuf>> {
         }
         if path
             .extension()
-            .with_context("unable to get the file extension")?
+            .context("unable to get the file extension")?
             != ext
         {
             continue;

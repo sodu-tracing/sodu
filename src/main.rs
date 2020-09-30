@@ -19,15 +19,14 @@ extern crate test;
 mod buffer;
 mod encoder;
 mod ingester;
-mod memtable;
 mod options;
 mod proto;
 mod segment;
 mod server;
-mod table;
 mod utils;
 mod wal;
 
+use anyhow::Context;
 use log::debug;
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -38,11 +37,14 @@ fn main() {
     utils::utils::init_all_utils();
     debug!("running in debug mode yo man");
     // Create the ingester instance.
-    let ingester = ingester::segment_ingester::SegmentIngester::new(opt.shard_path);
+    let ingester = ingester::segment_ingester::SegmentIngester::new(opt.shard_path.clone());
     let protected_ingester = Arc::new(Mutex::new(ingester));
     // run the the ingester.
     let (coordinator, receiver) = ingester::coordinator::IngesterCoordinator::new();
-    let runner = ingester::ingester_runner::IngesterRunner::new(protected_ingester.clone());
+    let wal = wal::wal::Wal::new(opt.clone())
+        .context(format!("error while building wal"))
+        .unwrap();
+    let runner = ingester::ingester_runner::IngesterRunner::new(protected_ingester.clone(), wal);
     runner.run(receiver);
     // Start the grpc server.
     server::grpc::start_server(coordinator);

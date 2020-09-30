@@ -17,7 +17,6 @@ use crate::proto::types::{SegmentMetadata, TraceIDOffset, TraceIds};
 use protobuf::{Message, RepeatedField};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::u64;
@@ -128,7 +127,7 @@ impl SegmentBuilder {
         for (index_key, hashed_trace_ids) in index {
             let mut trace_ids = Vec::with_capacity(hashed_trace_ids.len());
             trace_ids.extend(hashed_trace_ids.iter());
-            /// There should be way to embed rust types.
+            // There should be way to embed rust types.
             let mut segment_trace_ids = TraceIds::default();
             segment_trace_ids.set_trace_ids(trace_ids);
             segment_index.insert(index_key.clone(), segment_trace_ids);

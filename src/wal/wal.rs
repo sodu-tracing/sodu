@@ -7,11 +7,11 @@ use anyhow::Context;
 use anyhow::Result;
 use futures::io::IoSlice;
 use iou::IoUring;
-use log::{debug, info};
+use log::info;
 use std::collections::HashSet;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// WAL_USER_DATA is the io_uring user data for wal files.
 const WAL_USER_DATA: u64 = 10;
@@ -33,15 +33,25 @@ pub struct Wal {
     tmp_encoding_buffer: Buffer,
     /// wal_path is the wal file directory.
     wal_path: PathBuf,
+    /// pending_io_submission tells that we have submitted block io to io_uring but it's
+    /// reclaimed.
+    pending_io_submission: bool,
+}
+
+pub struct EncodedRequest<'a> {
+    pub start_ts: u64,
+    pub wal_offset: u64,
+    pub encoded_span: &'a [u8],
+    pub indices: HashSet<String>,
 }
 
 impl Wal {
     /// new return Wal. It is used for writing the incomming spans.
     pub fn new(opt: Options) -> Result<Wal> {
         let wal_files_path = read_files_in_dir(&opt.wal_path, "wal")
-            .with_context(format!("unable to read files at {:?}", &opt.wal_path))
+            .context(format!("unable to read files at {:?}", &opt.wal_path))
             .unwrap();
-        let mut file_ids = get_file_ids(&wal_files_path);
+        let file_ids = get_file_ids(&wal_files_path);
         // looks like we don't have any wal files. Let's create a new  file and just return it.
         if file_ids.len() == 0 {
             info!("opened wal for the first time so opening new wal file with id 1");
@@ -51,9 +61,10 @@ impl Wal {
                 tmp_span_buffer: Buffer::with_size(4 << 20),
                 written_offset: 0,
                 current_wal_file: wal_file,
-                iou: IoUring::new(5).with_context("unable to open io_uring instance at wal")?,
+                iou: IoUring::new(5).context("unable to open io_uring instance at wal")?,
                 tmp_encoding_buffer: Buffer::with_size(2 << 20),
                 wal_path: opt.wal_path,
+                pending_io_submission: false,
             });
         }
         // Find the last file and decide whether to create a new wal file or you can use the existing
@@ -63,11 +74,12 @@ impl Wal {
             .read(true)
             .write(true)
             .open(opt.wal_path.join(format!("{:?}.wal", last_file_id)))
-            .with_context(format!("unable to open wal file {:?}", last_file_id))?;
+            .context(format!("unable to open wal file {:?}", last_file_id))?;
         // Check the size.
-        let metadata = wal_file
-            .metadata()
-            .with_context("unable to read the metadata of wal file {:?}", last_file_id)?;
+        let metadata = wal_file.metadata().context(format!(
+            "unable to read the metadata of wal file {:?}",
+            last_file_id
+        ))?;
         if metadata.len() < 1024 << 20 {
             // Last wal file is lesser than 1 gb so let's just use this file itself.
             return Ok(Wal {
@@ -75,9 +87,10 @@ impl Wal {
                 tmp_span_buffer: Buffer::with_size(4 << 20),
                 written_offset: metadata.len(),
                 current_wal_file: wal_file,
-                iou: IoUring::new(5).with_context("unable to open io_uring instance at wal")?,
+                iou: IoUring::new(5).context("unable to open io_uring instance at wal")?,
                 tmp_encoding_buffer: Buffer::with_size(2 << 20),
                 wal_path: opt.wal_path,
+                pending_io_submission: false,
             });
         }
         // Looks like last file is big. Let's create a new wal file.
@@ -88,34 +101,32 @@ impl Wal {
             tmp_span_buffer: Buffer::with_size(4 << 20),
             written_offset: 0,
             current_wal_file: wal_file,
-            iou: IoUring::new(5).with_context("unable to open io_uring instance at wal")?,
+            iou: IoUring::new(5).context("unable to open io_uring instance at wal")?,
             tmp_encoding_buffer: Buffer::with_size(2 << 20),
             wal_path: opt.wal_path,
+            pending_io_submission: false,
         });
     }
 
     /// write_spans writes the given span to the wal file using io_uring. wait_for_submitted_wal_span
     /// needs to called before writing the next batch of spans.
-    pub fn write_spans(&mut self, spans: Vec<Span>) -> Vec<(u64, &[u8], HashSet<String>)> {
-        let mut span_encoded_request = Vec::new();
-        for span in spans {
-            self.tmp_encoding_buffer.clear();
-            let indices = encode_span(&span, &mut self.tmp_encoding_buffer);
-            let offset = self
-                .tmp_span_buffer
-                .write_slice(self.tmp_encoding_buffer.bytes_ref());
-            span_encoded_request.push((
-                self.written_offset + offset as u64,
-                self.tmp_span_buffer.slice_at(offset),
-                indices,
-            ))
+    pub fn write_spans(&mut self, span: Span) -> EncodedRequest {
+        self.tmp_encoding_buffer.clear();
+        let indices = encode_span(&span, &mut self.tmp_encoding_buffer);
+        let offset = self
+            .tmp_span_buffer
+            .write_slice(self.tmp_encoding_buffer.bytes_ref());
+        EncodedRequest {
+            start_ts: span.start_time_unix_nano,
+            encoded_span: self.tmp_span_buffer.slice_at(offset),
+            wal_offset: self.written_offset + offset as u64,
+            indices: indices,
         }
-        self.submit_buffer_to_iou();
-        span_encoded_request
     }
 
     /// submit_buffer_to_iou submits the buffered spans to the wal file.
-    fn submit_buffer_to_iou(&mut self) {
+    pub fn submit_buffer_to_iou(&mut self) {
+        self.pending_io_submission = true;
         unsafe {
             let mut sq = self.iou.sq();
             let mut sqe = sq.next_sqe().expect(
@@ -138,12 +149,22 @@ impl Wal {
 
     /// wait_for_submitted_wal_span wait for the submmited buffer to go thorough the file.
     pub fn wait_for_submitted_wal_span(&mut self) {
+        if !self.pending_io_submission {
+            return;
+        }
         let mut cq = self.iou.cq();
         let cqe = cq
             .wait_for_cqe()
             .expect("unable to wait for cqe entry at wal");
         assert_eq!(cqe.is_timeout(), false);
         assert_eq!(cqe.user_data(), WAL_USER_DATA);
+        self.written_offset += self.tmp_span_buffer.size() as u64;
+        self.tmp_span_buffer.clear();
+        self.pending_io_submission = false;
+    }
+
+    pub fn buffered_size(&self) -> usize {
+        self.tmp_span_buffer.size()
     }
 
     /// current_wal_id returns the current wal file id.
@@ -158,7 +179,7 @@ impl Wal {
             return;
         }
         let new_wal_id = self.last_wal_id + 1;
-        let file = File::open(self.wal_path.join(format!("{:?}.wal", new_wal_id)))
+        let file = File::create(self.wal_path.join(format!("{:?}.wal", new_wal_id)))
             .expect("unable to create new wal file on wal refresh");
         self.last_wal_id += 1;
         self.written_offset = 0;

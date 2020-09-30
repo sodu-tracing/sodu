@@ -35,7 +35,7 @@ impl Options {
         opt.shard_path = opt.dir.join("shard");
         fs::create_dir_all(&opt.shard_path).expect("unable to create shard path");
         // Create the wal path.
-        opt.wal_path = opt.dir.joun("wal");
+        opt.wal_path = opt.dir.join("wal");
         fs::create_dir_all(&opt.wal_path).expect("unable to create shard path");
         opt
     }

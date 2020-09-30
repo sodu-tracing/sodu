@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
-use std::collections::HashMap;
 
 /// SegmentIterator is used to iterate over inmemory segment.
 pub struct SegmentIterator<'a> {
