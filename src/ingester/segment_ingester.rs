@@ -128,7 +128,12 @@ impl SegmentIngester {
                 for (start_ts, spans) in past_segment.iter() {
                     builder.add_trace(start_ts, spans);
                 }
-                let buf = builder.finish_segment(past_segment.index());
+                let buf = builder.finish_segment(
+                    past_segment.index(),
+                    past_segment.max_wal_id(),
+                    past_segment.max_wal_offset(),
+                    past_segment.delayed_wal_offsets(),
+                );
                 let segment_file = self.get_next_segment_file();
 
                 unsafe {

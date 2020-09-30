@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
-use crate::proto::types::ChuckMetadata;
+use crate::proto::types::{ChuckMetadata, WalOffsets};
 use crate::proto::types::{SegmentMetadata, TraceIDOffset, TraceIds};
 use protobuf::{Message, RepeatedField};
 use std::collections::hash_map::DefaultHasher;
@@ -116,7 +116,13 @@ impl SegmentBuilder {
         size
     }
 
-    pub fn finish_segment(&mut self, index: &HashMap<String, HashSet<u64>>) -> &Buffer {
+    pub fn finish_segment(
+        &mut self,
+        index: &HashMap<String, HashSet<u64>>,
+        max_wal_id: u64,
+        max_wal_offset: u64,
+        delayed_wal_offsets: &HashMap<u64, Vec<u64>>,
+    ) -> &Buffer {
         // finish the current chunk.
         if self.current_chunk_offset != self.buffer.size() {
             self.finish_chunk();
@@ -136,6 +142,15 @@ impl SegmentBuilder {
         segment_metadata.set_index(segment_index);
         segment_metadata.set_min_start_ts(self.chunks[0].get_min_start_ts());
         segment_metadata.set_max_start_ts(self.chunks[self.chunks.len() - 1].get_max_start_ts());
+        segment_metadata.set_max_wal_id(max_wal_id);
+        segment_metadata.set_max_wal_offset(max_wal_offset);
+        let mut delayed_span_wal_offsets = HashMap::default();
+        for (wal_id, offsets) in delayed_wal_offsets {
+            let mut wal_offsets = WalOffsets::default();
+            wal_offsets.set_offsets(offsets.clone());
+            delayed_span_wal_offsets.insert(wal_id.clone(), wal_offsets);
+        }
+        segment_metadata.set_delayed_span_wal_offsets(delayed_span_wal_offsets);
         self.trace_offsets
             .sort_by(|a, b| a.get_hashed_trace_id().cmp(&b.get_hashed_trace_id()));
         let trace_offsets = mem::replace(&mut self.trace_offsets, Vec::new());

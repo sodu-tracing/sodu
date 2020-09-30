@@ -15,10 +15,17 @@ message TraceIds {
   repeated uint64 trace_ids = 1;
 }
 
+message WalOffsets {
+  repeated uint64 offsets = 1;
+}
+
 message SegmentMetadata {
   required uint64 min_start_ts  = 1;
   required uint64 max_start_ts  = 2;
   repeated ChuckMetadata chunks = 3;
   map<string,TraceIds> index = 4;
   repeated TraceIDOffset sorted_trace_ids = 5;
+  map<uint64, WalOffsets> delayed_span_wal_offsets = 6;
+  required uint64 max_wal_id = 7;
+  required uint64 max_wal_offset = 8;
 }

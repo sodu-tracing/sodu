@@ -21,6 +21,7 @@ mod encoder;
 mod ingester;
 mod options;
 mod proto;
+mod recovery;
 mod segment;
 mod server;
 mod utils;

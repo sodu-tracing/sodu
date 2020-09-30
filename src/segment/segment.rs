@@ -18,8 +18,14 @@ pub struct Segment {
     max_start_ts: u64,
     /// num_of_spans gives the number of span in the segment.
     num_of_spans: u64,
+    /// max_wal_id is the maximum wal id of this segment.  Any thing higher than this
+    /// is not persisted.
     max_wal_id: u64,
+    /// max_wal_offset is the last offset of the the wal file that has been persisted in this
+    /// segment.
     max_wal_offset: u64,
+    /// delayed_wal_span_offsets contains delayed span wal offsets. This is used to skip this
+    /// offset when we replaying the WAL.
     delayed_wal_span_offsets: HashMap<u64, Vec<u64>>,
 }
 
@@ -119,11 +125,22 @@ impl Segment {
         self.num_of_spans
     }
 
+    pub fn max_wal_id(&self) -> u64 {
+        self.max_wal_id
+    }
+
+    pub fn max_wal_offset(&self) -> u64 {
+        self.max_wal_offset
+    }
+
     pub fn max_trace_start_ts(&self) -> u64 {
         self.max_start_ts
     }
     pub fn index(&self) -> &HashMap<String, HashSet<u64>> {
         &self.index
+    }
+    pub fn delayed_wal_offsets(&self) -> &HashMap<u64, Vec<u64>> {
+        &self.delayed_wal_span_offsets
     }
 
     pub fn iter(&self) -> SegmentIterator {

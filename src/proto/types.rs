@@ -719,6 +719,167 @@ impl ::protobuf::reflect::ProtobufValue for TraceIds {
 
 #[derive(PartialEq,Clone,Default)]
 #[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+pub struct WalOffsets {
+    // message fields
+    pub offsets: ::std::vec::Vec<u64>,
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a WalOffsets {
+    fn default() -> &'a WalOffsets {
+        <WalOffsets as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl WalOffsets {
+    pub fn new() -> WalOffsets {
+        ::std::default::Default::default()
+    }
+
+    // repeated uint64 offsets = 1;
+
+
+    pub fn get_offsets(&self) -> &[u64] {
+        &self.offsets
+    }
+    pub fn clear_offsets(&mut self) {
+        self.offsets.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_offsets(&mut self, v: ::std::vec::Vec<u64>) {
+        self.offsets = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_offsets(&mut self) -> &mut ::std::vec::Vec<u64> {
+        &mut self.offsets
+    }
+
+    // Take field
+    pub fn take_offsets(&mut self) -> ::std::vec::Vec<u64> {
+        ::std::mem::replace(&mut self.offsets, ::std::vec::Vec::new())
+    }
+}
+
+impl ::protobuf::Message for WalOffsets {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_repeated_uint64_into(wire_type, is, &mut self.offsets)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        for value in &self.offsets {
+            my_size += ::protobuf::rt::value_size(1, *value, ::protobuf::wire_format::WireTypeVarint);
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        for v in &self.offsets {
+            os.write_uint64(1, *v)?;
+        };
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> WalOffsets {
+        WalOffsets::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "offsets",
+                |m: &WalOffsets| { &m.offsets },
+                |m: &mut WalOffsets| { &mut m.offsets },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<WalOffsets>(
+                "WalOffsets",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static WalOffsets {
+        static instance: ::protobuf::rt::LazyV2<WalOffsets> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(WalOffsets::new)
+    }
+}
+
+impl ::protobuf::Clear for WalOffsets {
+    fn clear(&mut self) {
+        self.offsets.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for WalOffsets {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for WalOffsets {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct SegmentMetadata {
     // message fields
     pub min_start_ts: ::std::option::Option<u64>,
@@ -726,6 +887,9 @@ pub struct SegmentMetadata {
     pub chunks: ::protobuf::RepeatedField<ChuckMetadata>,
     pub index: ::std::collections::HashMap<::std::string::String, TraceIds>,
     pub sorted_trace_ids: ::protobuf::RepeatedField<TraceIDOffset>,
+    pub delayed_span_wal_offsets: ::std::collections::HashMap<u64, WalOffsets>,
+    pub max_wal_id: ::std::option::Option<u64>,
+    pub max_wal_offset: ::std::option::Option<u64>,
     // special fields
     #[cfg_attr(feature = "with-serde", serde(skip))]
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -856,6 +1020,69 @@ impl SegmentMetadata {
     pub fn take_sorted_trace_ids(&mut self) -> ::protobuf::RepeatedField<TraceIDOffset> {
         ::std::mem::replace(&mut self.sorted_trace_ids, ::protobuf::RepeatedField::new())
     }
+
+    // repeated .SegmentMetadata.DelayedSpanWalOffsetsEntry delayed_span_wal_offsets = 6;
+
+
+    pub fn get_delayed_span_wal_offsets(&self) -> &::std::collections::HashMap<u64, WalOffsets> {
+        &self.delayed_span_wal_offsets
+    }
+    pub fn clear_delayed_span_wal_offsets(&mut self) {
+        self.delayed_span_wal_offsets.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_delayed_span_wal_offsets(&mut self, v: ::std::collections::HashMap<u64, WalOffsets>) {
+        self.delayed_span_wal_offsets = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_delayed_span_wal_offsets(&mut self) -> &mut ::std::collections::HashMap<u64, WalOffsets> {
+        &mut self.delayed_span_wal_offsets
+    }
+
+    // Take field
+    pub fn take_delayed_span_wal_offsets(&mut self) -> ::std::collections::HashMap<u64, WalOffsets> {
+        ::std::mem::replace(&mut self.delayed_span_wal_offsets, ::std::collections::HashMap::new())
+    }
+
+    // required uint64 max_wal_id = 7;
+
+
+    pub fn get_max_wal_id(&self) -> u64 {
+        self.max_wal_id.unwrap_or(0)
+    }
+    pub fn clear_max_wal_id(&mut self) {
+        self.max_wal_id = ::std::option::Option::None;
+    }
+
+    pub fn has_max_wal_id(&self) -> bool {
+        self.max_wal_id.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_max_wal_id(&mut self, v: u64) {
+        self.max_wal_id = ::std::option::Option::Some(v);
+    }
+
+    // required uint64 max_wal_offset = 8;
+
+
+    pub fn get_max_wal_offset(&self) -> u64 {
+        self.max_wal_offset.unwrap_or(0)
+    }
+    pub fn clear_max_wal_offset(&mut self) {
+        self.max_wal_offset = ::std::option::Option::None;
+    }
+
+    pub fn has_max_wal_offset(&self) -> bool {
+        self.max_wal_offset.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_max_wal_offset(&mut self, v: u64) {
+        self.max_wal_offset = ::std::option::Option::Some(v);
+    }
 }
 
 impl ::protobuf::Message for SegmentMetadata {
@@ -864,6 +1091,12 @@ impl ::protobuf::Message for SegmentMetadata {
             return false;
         }
         if self.max_start_ts.is_none() {
+            return false;
+        }
+        if self.max_wal_id.is_none() {
+            return false;
+        }
+        if self.max_wal_offset.is_none() {
             return false;
         }
         for v in &self.chunks {
@@ -906,6 +1139,23 @@ impl ::protobuf::Message for SegmentMetadata {
                 5 => {
                     ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.sorted_trace_ids)?;
                 },
+                6 => {
+                    ::protobuf::rt::read_map_into::<::protobuf::types::ProtobufTypeUint64, ::protobuf::types::ProtobufTypeMessage<WalOffsets>>(wire_type, is, &mut self.delayed_span_wal_offsets)?;
+                },
+                7 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.max_wal_id = ::std::option::Option::Some(tmp);
+                },
+                8 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.max_wal_offset = ::std::option::Option::Some(tmp);
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -933,6 +1183,13 @@ impl ::protobuf::Message for SegmentMetadata {
             let len = value.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         };
+        my_size += ::protobuf::rt::compute_map_size::<::protobuf::types::ProtobufTypeUint64, ::protobuf::types::ProtobufTypeMessage<WalOffsets>>(6, &self.delayed_span_wal_offsets);
+        if let Some(v) = self.max_wal_id {
+            my_size += ::protobuf::rt::value_size(7, v, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if let Some(v) = self.max_wal_offset {
+            my_size += ::protobuf::rt::value_size(8, v, ::protobuf::wire_format::WireTypeVarint);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -956,6 +1213,13 @@ impl ::protobuf::Message for SegmentMetadata {
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         };
+        ::protobuf::rt::write_map_with_cached_sizes::<::protobuf::types::ProtobufTypeUint64, ::protobuf::types::ProtobufTypeMessage<WalOffsets>>(6, &self.delayed_span_wal_offsets, os)?;
+        if let Some(v) = self.max_wal_id {
+            os.write_uint64(7, v)?;
+        }
+        if let Some(v) = self.max_wal_offset {
+            os.write_uint64(8, v)?;
+        }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -1019,6 +1283,21 @@ impl ::protobuf::Message for SegmentMetadata {
                 |m: &SegmentMetadata| { &m.sorted_trace_ids },
                 |m: &mut SegmentMetadata| { &mut m.sorted_trace_ids },
             ));
+            fields.push(::protobuf::reflect::accessor::make_map_accessor::<_, ::protobuf::types::ProtobufTypeUint64, ::protobuf::types::ProtobufTypeMessage<WalOffsets>>(
+                "delayed_span_wal_offsets",
+                |m: &SegmentMetadata| { &m.delayed_span_wal_offsets },
+                |m: &mut SegmentMetadata| { &mut m.delayed_span_wal_offsets },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_option_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "max_wal_id",
+                |m: &SegmentMetadata| { &m.max_wal_id },
+                |m: &mut SegmentMetadata| { &mut m.max_wal_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_option_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "max_wal_offset",
+                |m: &SegmentMetadata| { &m.max_wal_offset },
+                |m: &mut SegmentMetadata| { &mut m.max_wal_offset },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<SegmentMetadata>(
                 "SegmentMetadata",
                 fields,
@@ -1040,6 +1319,9 @@ impl ::protobuf::Clear for SegmentMetadata {
         self.chunks.clear();
         self.index.clear();
         self.sorted_trace_ids.clear();
+        self.delayed_span_wal_offsets.clear();
+        self.max_wal_id = ::std::option::Option::None;
+        self.max_wal_offset = ::std::option::Option::None;
         self.unknown_fields.clear();
     }
 }
@@ -1064,14 +1346,21 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x18\x05\x20\x03(\rR\x0ctraceOffsets\"O\n\rTraceIDOffset\x12\x16\n\x06of\
     fset\x18\x01\x20\x02(\rR\x06offset\x12&\n\x0fhashed_trace_id\x18\x02\x20\
     \x02(\x04R\rhashedTraceId\"'\n\x08TraceIds\x12\x1b\n\ttrace_ids\x18\x01\
-    \x20\x03(\x04R\x08traceIds\"\xaf\x02\n\x0fSegmentMetadata\x12\x20\n\x0cm\
-    in_start_ts\x18\x01\x20\x02(\x04R\nminStartTs\x12\x20\n\x0cmax_start_ts\
+    \x20\x03(\x04R\x08traceIds\"&\n\nWalOffsets\x12\x18\n\x07offsets\x18\x01\
+    \x20\x03(\x04R\x07offsets\"\xb0\x04\n\x0fSegmentMetadata\x12\x20\n\x0cmi\
+    n_start_ts\x18\x01\x20\x02(\x04R\nminStartTs\x12\x20\n\x0cmax_start_ts\
     \x18\x02\x20\x02(\x04R\nmaxStartTs\x12&\n\x06chunks\x18\x03\x20\x03(\x0b\
     2\x0e.ChuckMetadataR\x06chunks\x121\n\x05index\x18\x04\x20\x03(\x0b2\x1b\
     .SegmentMetadata.IndexEntryR\x05index\x128\n\x10sorted_trace_ids\x18\x05\
-    \x20\x03(\x0b2\x0e.TraceIDOffsetR\x0esortedTraceIds\x1aC\n\nIndexEntry\
-    \x12\x10\n\x03key\x18\x01\x20\x01(\tR\x03key\x12\x1f\n\x05value\x18\x02\
-    \x20\x01(\x0b2\t.TraceIdsR\x05value:\x028\x01\
+    \x20\x03(\x0b2\x0e.TraceIDOffsetR\x0esortedTraceIds\x12d\n\x18delayed_sp\
+    an_wal_offsets\x18\x06\x20\x03(\x0b2+.SegmentMetadata.DelayedSpanWalOffs\
+    etsEntryR\x15delayedSpanWalOffsets\x12\x1c\n\nmax_wal_id\x18\x07\x20\x02\
+    (\x04R\x08maxWalId\x12$\n\x0emax_wal_offset\x18\x08\x20\x02(\x04R\x0cmax\
+    WalOffset\x1aC\n\nIndexEntry\x12\x10\n\x03key\x18\x01\x20\x01(\tR\x03key\
+    \x12\x1f\n\x05value\x18\x02\x20\x01(\x0b2\t.TraceIdsR\x05value:\x028\x01\
+    \x1aU\n\x1aDelayedSpanWalOffsetsEntry\x12\x10\n\x03key\x18\x01\x20\x01(\
+    \x04R\x03key\x12!\n\x05value\x18\x02\x20\x01(\x0b2\x0b.WalOffsetsR\x05va\
+    lue:\x028\x01\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;
