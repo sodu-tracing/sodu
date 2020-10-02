@@ -52,7 +52,10 @@ impl RecoveryManager {
                     segment_file_ids[0]
                 ))
                 .unwrap();
-            (wal_id, wal_offset, delayed_wal_offsets) = segment_file.get_wal_offset();
+            let offset_metadata = segment_file.get_wal_offset();
+            wal_id = offset_metadata.0;
+            wal_offset = offset_metadata.1;
+            delayed_wal_offsets = offset_metadata.2;
         }
         // Now it's time to find delayed offset that is greater than the current wal_id.
         for idx in 1..segment_file_ids.len() {

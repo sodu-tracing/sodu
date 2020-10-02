@@ -53,5 +53,6 @@ impl SegmentFile {
         let wal_offset = self.metadata.max_wal_offset.unwrap();
         let wal_id = self.metadata.max_wal_id.unwrap();
         let delayed_offsets = self.metadata.delayed_span_wal_offsets.clone();
+        (wal_id, wal_offset, delayed_offsets)
     }
 }

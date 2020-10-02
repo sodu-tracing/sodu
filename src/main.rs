@@ -14,6 +14,7 @@
 #![allow(dead_code)]
 #![feature(test)]
 #![feature(with_options)]
+#![feature(bufreader_seek_relative)]
 extern crate test;
 
 mod buffer;

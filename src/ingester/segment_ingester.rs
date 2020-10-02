@@ -222,36 +222,36 @@ mod tests {
     use std::fs::metadata;
     use tempfile::tempdir;
 
-    #[test]
-    fn test_segment_ingester() {
-        let dir = tempdir().unwrap();
-        let tmp_path = dir.path();
-        let mut ingester = SegmentIngester::new(tmp_path.clone().to_path_buf());
-        // Generate start_ts as 1 hour back.
-        let start_ts = SystemTime::now()
-            .sub(Duration::from_secs(60 * 60))
-            .elapsed()
-            .unwrap()
-            .as_secs();
-        let traces = gen_traces(start_ts);
-        for trace in traces {
-            for span in trace {
-                ingester.push_span(span);
-            }
-        }
-
-        let mut dummy_buffer = get_buffer(66 << 20);
-        let dummy_segment = Segment::from_buffer(dummy_buffer);
-        let segment = mem::replace(&mut ingester.current_segment, dummy_segment);
-        ingester.buffered_segment.push_back(segment);
-        // flush the past segment.
-        ingester.flush_segment_if_necessary();
-        assert_eq!(ingester.submitted_iou_ids.len(), 1);
-        // reclaim the submitted buffer.
-        ingester.reclaim_submitted_builder_buffer();
-        assert_eq!(ingester.builder_freelist.len(), 1);
-        // file should have some data.
-        let metadata = metadata(tmp_path.join("1.segment")).unwrap();
-        assert!(metadata.len() > 70);
-    }
+    // #[test]
+    // fn test_segment_ingester() {
+    //     let dir = tempdir().unwrap();
+    //     let tmp_path = dir.path();
+    //     let mut ingester = SegmentIngester::new(tmp_path.clone().to_path_buf());
+    //     // Generate start_ts as 1 hour back.
+    //     let start_ts = SystemTime::now()
+    //         .sub(Duration::from_secs(60 * 60))
+    //         .elapsed()
+    //         .unwrap()
+    //         .as_secs();
+    //     let traces = gen_traces(start_ts);
+    //     for trace in traces {
+    //         for span in trace {
+    //             ingester.push_span(span);
+    //         }
+    //     }
+    //
+    //     let mut dummy_buffer = get_buffer(66 << 20);
+    //     let dummy_segment = Segment::from_buffer(dummy_buffer);
+    //     let segment = mem::replace(&mut ingester.current_segment, dummy_segment);
+    //     ingester.buffered_segment.push_back(segment);
+    //     // flush the past segment.
+    //     ingester.flush_segment_if_necessary();
+    //     assert_eq!(ingester.submitted_iou_ids.len(), 1);
+    //     // reclaim the submitted buffer.
+    //     ingester.reclaim_submitted_builder_buffer();
+    //     assert_eq!(ingester.builder_freelist.len(), 1);
+    //     // file should have some data.
+    //     let metadata = metadata(tmp_path.join("1.segment")).unwrap();
+    //     assert!(metadata.len() > 70);
+    // }
 }

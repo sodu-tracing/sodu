@@ -19,25 +19,25 @@ use log::warn;
 use std::collections::HashSet;
 
 // Tells that upcoming bytes of attribute key and value.
-const ATTRIBUTE_TYPE: u8 = 1;
+pub const ATTRIBUTE_TYPE: u8 = 1;
 // Tells that upcoming bytes is of link type.
-const LINK_TYPE: u8 = 2;
+pub const LINK_TYPE: u8 = 2;
 // Tells that upcoming bytes is of event type.
-const EVENT_TYPE: u8 = 3;
+pub const EVENT_TYPE: u8 = 3;
 // Tells that parent span id exist.
-const PARENT_SPAN_ID_EXIST: u8 = 4;
+pub const PARENT_SPAN_ID_EXIST: u8 = 4;
 // Tells that parent span id is not exist.
-const PARENT_SPAN_ID_NOT_EXIST: u8 = 5;
+pub const PARENT_SPAN_ID_NOT_EXIST: u8 = 5;
 // Attribute of bool type.
-const BOOL_VAL_TYPE: u8 = 6;
+pub const BOOL_VAL_TYPE: u8 = 6;
 // Attribute of double val type.
-const DOUBLE_VAL_TYPE: u8 = 8;
+pub const DOUBLE_VAL_TYPE: u8 = 8;
 // Attribute of int val type.
-const INT_VAL_TYPE: u8 = 9;
+pub const INT_VAL_TYPE: u8 = 9;
 // Attribute of string val type.
-const STRING_VAL_TYPE: u8 = 10;
+pub const STRING_VAL_TYPE: u8 = 10;
 // Tells that span is ended.
-const SPAN_END: u8 = 11;
+pub const SPAN_END: u8 = 11;
 
 /// encode_span encodes the given span into the buffer.
 pub fn encode_span(span: &Span, buffer: &mut Buffer) -> HashSet<String> {
@@ -150,45 +150,45 @@ fn span_kind_to_u8(kind: &Span_SpanKind) -> u8 {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::buffer::buffer::Buffer;
-    use crate::encoder::span::encode_span;
-    use crate::memtable::memtable::tests::gen_span;
-    use protobuf::Message;
-    use test::Bencher;
-
-    #[bench]
-    fn bench_protobuf_encoding(b: &mut Bencher) {
-        let mut trace_id: [u8; 16] = [0; 16];
-        let mut spans = Vec::new();
-        let mut span = gen_span();
-        span.trace_id = trace_id.to_vec();
-        spans.push(span.clone());
-        spans.push(span.clone());
-        spans.push(span.clone());
-        spans.push(span.clone());
-        b.iter(|| {
-            for span in spans.iter() {
-                let _bytes = span.write_to_bytes();
-            }
-        });
-    }
-
-    #[bench]
-    fn bench_aakal_encoding(b: &mut Bencher) {
-        let mut trace_id: [u8; 16] = [0; 16];
-        let mut spans = Vec::new();
-        let mut span = gen_span();
-        span.trace_id = trace_id.to_vec();
-        spans.push(span.clone());
-        spans.push(span.clone());
-        spans.push(span.clone());
-        spans.push(span.clone());
-
-        b.iter(|| {
-            for span in spans.iter() {
-                let mut buffer = Buffer::with_size(span.compute_size() as usize);
-                encode_span(span, &mut buffer);
-            }
-        });
-    }
+    // use crate::buffer::buffer::Buffer;
+    // use crate::encoder::span::encode_span;
+    // use crate::memtable::memtable::tests::gen_span;
+    // use protobuf::Message;
+    // use test::Bencher;
+    //
+    // #[bench]
+    // fn bench_protobuf_encoding(b: &mut Bencher) {
+    //     let mut trace_id: [u8; 16] = [0; 16];
+    //     let mut spans = Vec::new();
+    //     let mut span = gen_span();
+    //     span.trace_id = trace_id.to_vec();
+    //     spans.push(span.clone());
+    //     spans.push(span.clone());
+    //     spans.push(span.clone());
+    //     spans.push(span.clone());
+    //     b.iter(|| {
+    //         for span in spans.iter() {
+    //             let _bytes = span.write_to_bytes();
+    //         }
+    //     });
+    // }
+    //
+    // #[bench]
+    // fn bench_aakal_encoding(b: &mut Bencher) {
+    //     let mut trace_id: [u8; 16] = [0; 16];
+    //     let mut spans = Vec::new();
+    //     let mut span = gen_span();
+    //     span.trace_id = trace_id.to_vec();
+    //     spans.push(span.clone());
+    //     spans.push(span.clone());
+    //     spans.push(span.clone());
+    //     spans.push(span.clone());
+    //
+    //     b.iter(|| {
+    //         for span in spans.iter() {
+    //             let mut buffer = Buffer::with_size(span.compute_size() as usize);
+    //             encode_span(span, &mut buffer);
+    //         }
+    //     });
+    // }
 }
