@@ -13,11 +13,12 @@
 // limitations under the License.
 use crate::buffer::buffer_reader::BufferReader;
 use crate::encoder::span::{
-    ATTRIBUTE_TYPE, BOOL_VAL_TYPE, DOUBLE_VAL_TYPE, INT_VAL_TYPE, PARENT_SPAN_ID_EXIST,
-    STRING_VAL_TYPE,
+    ATTRIBUTE_TYPE, BOOL_VAL_TYPE, DOUBLE_VAL_TYPE, EVENT_TYPE, INT_VAL_TYPE, LINK_TYPE,
+    PARENT_SPAN_ID_EXIST, STRING_VAL_TYPE,
 };
 use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
-use protobuf::SingularPtrField;
+use crate::proto::trace::{Span_Event, Span_Link};
+use protobuf::{RepeatedField, SingularPtrField};
 use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::default::Default;
@@ -50,6 +51,8 @@ pub struct SpanDecoder<'a> {
     span_kind: u8,
     name: String,
     attributes: Vec<KeyValue>,
+    events: Vec<Span_Event>,
+    links: Vec<Span_Link>,
 }
 
 impl<'a> SpanDecoder<'a> {
@@ -73,10 +76,16 @@ impl<'a> SpanDecoder<'a> {
         self.span_kind = self.reader.read_byte().unwrap();
         self.name = String::from_utf8_lossy(self.reader.read_slice().unwrap().unwrap()).to_string();
         self.decode_attributes(&mut self.attributes);
+        self.decode_event();
+        self.decode_link();
     }
 
     pub fn decode_attributes(&mut self, attributes: &mut Vec<KeyValue>) {
-        if self.reader.peek_byte().unwrap() != ATTRIBUTE_TYPE {
+        let meta = self.reader.peek_byte();
+        if let None = meta {
+            return;
+        }
+        if meta.unwrap() != ATTRIBUTE_TYPE {
             return;
         }
         self.reader.consume(1).unwrap();
@@ -144,5 +153,48 @@ impl<'a> SpanDecoder<'a> {
                 unreachable!("yolo");
             }
         }
+    }
+
+    fn decode_event(&mut self) {
+        self.reader.peek_byte().map(|meta| {
+            if meta != EVENT_TYPE {
+                return;
+            }
+            self.reader.consume(1).unwrap();
+            let mut event = Span_Event::new();
+            event.time_unix_nano = u64::from_be_bytes(
+                self.reader
+                    .read_slice()
+                    .unwrap()
+                    .unwrap()
+                    .try_into()
+                    .unwrap(),
+            );
+            event.name =
+                String::from_utf8_lossy(self.reader.read_slice().unwrap().unwrap()).to_string();
+            let mut attributes = Vec::new();
+            self.decode_attributes(&mut attributes);
+            event.attributes = RepeatedField::from(attributes);
+            self.events.push(event);
+            self.decode_event();
+        });
+    }
+
+    fn decode_link(&mut self) {
+        let meta = self.reader.peek_byte();
+        meta.map(|meta| {
+            if meta != LINK_TYPE {
+                return;
+            }
+            self.reader.consume(1).unwrap();
+            let mut link = Span_Link::new();
+            link.trace_id = self.reader.read_exact_length(16).unwrap().to_vec();
+            link.span_id = self.reader.read_exact_length(16).unwrap().to_vec();
+            link.trace_state =
+                String::from_utf8_lossy(self.reader.read_slice().unwrap().unwrap()).to_string();
+            let mut attributes = Vec::new();
+            self.decode_attributes(&mut attributes);
+            link.attributes = RepeatedField::from(attributes);
+        });
     }
 }
