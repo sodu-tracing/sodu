@@ -91,7 +91,6 @@ fn encode_attributes(attributes: &[KeyValue], buffer: &mut Buffer, indices: &mut
         return;
     }
     for attribute in attributes {
-        buffer.write_byte(ATTRIBUTE_TYPE);
         let value = attribute.value.as_ref().unwrap().value.as_ref().unwrap();
         if let AnyValue_oneof_value::array_value(_) = value {
             warn!("dropping array attribute {:?}", attribute);
@@ -100,6 +99,7 @@ fn encode_attributes(attributes: &[KeyValue], buffer: &mut Buffer, indices: &mut
             warn!("dropping kv list value {:?}", attribute);
             continue;
         }
+        buffer.write_byte(ATTRIBUTE_TYPE);
         match value {
             AnyValue_oneof_value::bool_value(val) => {
                 buffer.write_byte(BOOL_VAL_TYPE);

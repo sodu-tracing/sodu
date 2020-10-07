@@ -27,7 +27,7 @@ impl<'a> BufferReader<'a> {
         if self.current_offset + 1 > self.buf.len() {
             return None;
         }
-        Some(self.buf[self.current_offset + 1])
+        Some(self.buf[self.current_offset])
     }
 
     pub fn consume(&mut self, sz: usize) -> Result<()> {

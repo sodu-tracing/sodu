@@ -43,27 +43,31 @@ impl<'a> InplaceSpanDecoder<'a> {
 #[derive(Default)]
 pub struct SpanDecoder<'a> {
     reader: BufferReader<'a>,
-    trace_id: Option<Vec<u8>>,
-    span_id: Option<Vec<u8>>,
-    parent_span_id: Option<Vec<u8>>,
-    start_time: u64,
-    end_time: u64,
-    span_kind: u8,
-    name: String,
-    attributes: Vec<KeyValue>,
-    events: Vec<Span_Event>,
-    links: Vec<Span_Link>,
+    pub trace_id: Option<Vec<u8>>,
+    pub span_id: Option<Vec<u8>>,
+    pub parent_span_id: Option<Vec<u8>>,
+    pub start_time: u64,
+    pub end_time: u64,
+    pub span_kind: u8,
+    pub name: String,
+    pub attributes: Vec<KeyValue>,
+    pub events: Vec<Span_Event>,
+    pub links: Vec<Span_Link>,
 }
 
 impl<'a> SpanDecoder<'a> {
+    /// new decodes the encoded span and returns the decoded span.
     pub fn new(src: &[u8]) -> SpanDecoder {
-        SpanDecoder {
+        let mut decoder = SpanDecoder {
             reader: BufferReader::new(src),
             ..Default::default()
-        }
+        };
+        decoder.decode();
+        decoder
     }
 
-    pub fn decode(&mut self) {
+    /// decode decodes the span.
+    fn decode(&mut self) {
         self.trace_id = Some(self.reader.read_exact_length(16).unwrap().to_vec());
         self.span_id = Some(self.reader.read_exact_length(16).unwrap().to_vec());
         if self.reader.read_byte().unwrap() == PARENT_SPAN_ID_EXIST {
@@ -82,7 +86,9 @@ impl<'a> SpanDecoder<'a> {
         self.decode_link();
     }
 
-    pub fn decode_attributes(&mut self, attributes: &mut Vec<KeyValue>) {
+    /// decode_attributes decodes the attribute and add the key value to the given
+    /// vector.
+    fn decode_attributes(&mut self, attributes: &mut Vec<KeyValue>) {
         let meta = self.reader.peek_byte();
         if let None = meta {
             return;
@@ -157,6 +163,7 @@ impl<'a> SpanDecoder<'a> {
         }
     }
 
+    /// decode_event decodes the event.
     fn decode_event(&mut self) {
         self.reader.peek_byte().map(|meta| {
             if meta != EVENT_TYPE {
@@ -164,14 +171,8 @@ impl<'a> SpanDecoder<'a> {
             }
             self.reader.consume(1).unwrap();
             let mut event = Span_Event::new();
-            event.time_unix_nano = u64::from_be_bytes(
-                self.reader
-                    .read_slice()
-                    .unwrap()
-                    .unwrap()
-                    .try_into()
-                    .unwrap(),
-            );
+            let buf = self.reader.read_exact_length(8).unwrap();
+            event.time_unix_nano = u64::from_be_bytes(buf.try_into().unwrap());
             event.name =
                 String::from_utf8_lossy(self.reader.read_slice().unwrap().unwrap()).to_string();
             let mut attributes = Vec::new();
@@ -182,6 +183,7 @@ impl<'a> SpanDecoder<'a> {
         });
     }
 
+    /// decode_link decodes the span link.
     fn decode_link(&mut self) {
         let meta = self.reader.peek_byte();
         meta.map(|meta| {
@@ -216,12 +218,14 @@ mod tests {
         span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
         span.start_time_unix_nano = 200;
         span.end_time_unix_nano = 203;
+        span.name = String::from("hello");
         let mut kv = KeyValue::default();
         kv.key = String::from("string kv");
         let mut val = AnyValue::default();
         val.value = Some(AnyValue_oneof_value::string_value(String::from(
             "let's make it right",
         )));
+        kv.value = SingularPtrField::from(Some(val));
         span.attributes = RepeatedField::from(vec![kv.clone()]);
         let mut event = Span_Event::default();
         event.name = String::from("log 1");
@@ -242,6 +246,9 @@ mod tests {
 
         let mut decode = SpanDecoder::new(buffer.bytes_ref());
         decode.decode();
-        assert_eq!(decode.links.len(), 1);
+        assert_eq!(decode.name, String::from("hello"));
+        assert_eq!(decode.attributes.len(), 1);
+        assert_eq!(decode.events.len(), 2);
+        assert_eq!(decode.attributes[0].key, String::from("string kv"));
     }
 }
