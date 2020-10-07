@@ -43,9 +43,9 @@ impl<'a> InplaceSpanDecoder<'a> {
 #[derive(Default)]
 pub struct SpanDecoder<'a> {
     reader: BufferReader<'a>,
-    trace_id: Option<&'a [u8]>,
-    span_id: Option<&'a [u8]>,
-    parent_span_id: Option<&'a [u8]>,
+    trace_id: Option<Vec<u8>>,
+    span_id: Option<Vec<u8>>,
+    parent_span_id: Option<Vec<u8>>,
     start_time: u64,
     end_time: u64,
     span_kind: u8,
@@ -64,10 +64,10 @@ impl<'a> SpanDecoder<'a> {
     }
 
     pub fn decode(&mut self) {
-        self.trace_id = Some(self.reader.read_exact_length(16).unwrap());
-        self.span_id = Some(self.reader.read_exact_length(16).unwrap());
+        self.trace_id = Some(self.reader.read_exact_length(16).unwrap().to_vec());
+        self.span_id = Some(self.reader.read_exact_length(16).unwrap().to_vec());
         if self.reader.read_byte().unwrap() == PARENT_SPAN_ID_EXIST {
-            self.parent_span_id = Some(self.reader.read_exact_length(16).unwrap());
+            self.parent_span_id = Some(self.reader.read_exact_length(16).unwrap().to_vec());
         }
         let buf = self.reader.read_exact_length(8).unwrap();
         self.start_time = u64::from_be_bytes(buf.try_into().unwrap());
@@ -75,7 +75,9 @@ impl<'a> SpanDecoder<'a> {
         self.end_time = u64::from_be_bytes(buf.try_into().unwrap());
         self.span_kind = self.reader.read_byte().unwrap();
         self.name = String::from_utf8_lossy(self.reader.read_slice().unwrap().unwrap()).to_string();
-        self.decode_attributes(&mut self.attributes);
+        let mut attributes = Vec::new();
+        self.decode_attributes(&mut attributes);
+        self.attributes = attributes;
         self.decode_event();
         self.decode_link();
     }
@@ -196,5 +198,50 @@ impl<'a> SpanDecoder<'a> {
             self.decode_attributes(&mut attributes);
             link.attributes = RepeatedField::from(attributes);
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::buffer::buffer::Buffer;
+    use crate::encoder::span::encode_span;
+    use crate::proto::trace::Span;
+    use rand::Rng;
+
+    #[test]
+    fn test_decoding() {
+        let mut span = Span::default();
+        span.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.start_time_unix_nano = 200;
+        span.end_time_unix_nano = 203;
+        let mut kv = KeyValue::default();
+        kv.key = String::from("string kv");
+        let mut val = AnyValue::default();
+        val.value = Some(AnyValue_oneof_value::string_value(String::from(
+            "let's make it right",
+        )));
+        span.attributes = RepeatedField::from(vec![kv.clone()]);
+        let mut event = Span_Event::default();
+        event.name = String::from("log 1");
+        event.time_unix_nano = 100;
+        event.attributes = RepeatedField::from(vec![kv.clone()]);
+        let mut events = vec![event.clone()];
+        event.name = String::from("log2");
+        events.push(event);
+        span.events = RepeatedField::from(events);
+        let mut link = Span_Link::default();
+        link.attributes = RepeatedField::from(vec![kv.clone()]);
+        link.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        link.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.links = RepeatedField::from(vec![link]);
+
+        let mut buffer = Buffer::with_size(2 << 20);
+        encode_span(&span, &mut buffer);
+
+        let mut decode = SpanDecoder::new(buffer.bytes_ref());
+        decode.decode();
+        assert_eq!(decode.links.len(), 1);
     }
 }

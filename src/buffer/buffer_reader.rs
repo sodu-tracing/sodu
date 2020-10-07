@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
 use unsigned_varint::decode;
+
+#[derive(Default)]
 pub struct BufferReader<'a> {
     buf: &'a [u8],
     current_offset: usize,
