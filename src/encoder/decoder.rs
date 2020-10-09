@@ -17,13 +17,13 @@ use crate::encoder::span::{
     PARENT_SPAN_ID_EXIST, STRING_VAL_TYPE,
 };
 use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
-use crate::proto::trace::{Span_Event, Span_Link};
+use crate::proto::trace::{Span, Span_Event, Span_Link, Span_SpanKind};
+use protobuf::ProtobufEnum;
 use protobuf::{RepeatedField, SingularPtrField};
 use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::default::Default;
 use std::hash::{Hash, Hasher};
-use unsigned_varint::decode;
 
 pub struct InplaceSpanDecoder<'a>(pub &'a [u8]);
 
@@ -40,24 +40,48 @@ impl<'a> InplaceSpanDecoder<'a> {
     }
 }
 
+/// decode_span decodes the given span to protobuf span.
+pub fn decode_span(src: &[u8]) -> Span {
+    let mut decoder = SpanDecoder::new(src);
+    let mut span = Span::default();
+    span.trace_id = decoder.trace_id.unwrap();
+    span.span_id = decoder.span_id.unwrap();
+    if let Some(parent_span_id) = decoder.parent_span_id {
+        span.parent_span_id = parent_span_id;
+    }
+    span.name = decoder.name;
+    span.kind = u8_to_span_kind(decoder.span_kind);
+    span.start_time_unix_nano = decoder.start_time;
+    span.end_time_unix_nano = decoder.end_time;
+    span.attributes = RepeatedField::from(decoder.attributes);
+    span.events = RepeatedField::from(decoder.events);
+    span.links = RepeatedField::from(decoder.links);
+    span
+}
+
+#[inline(always)]
+fn u8_to_span_kind(kind: u8) -> Span_SpanKind {
+    Span_SpanKind::from_i32(kind as i32).unwrap()
+}
+
 #[derive(Default)]
-pub struct SpanDecoder<'a> {
+struct SpanDecoder<'a> {
     reader: BufferReader<'a>,
-    pub trace_id: Option<Vec<u8>>,
-    pub span_id: Option<Vec<u8>>,
-    pub parent_span_id: Option<Vec<u8>>,
-    pub start_time: u64,
-    pub end_time: u64,
-    pub span_kind: u8,
-    pub name: String,
-    pub attributes: Vec<KeyValue>,
-    pub events: Vec<Span_Event>,
-    pub links: Vec<Span_Link>,
+    trace_id: Option<Vec<u8>>,
+    span_id: Option<Vec<u8>>,
+    parent_span_id: Option<Vec<u8>>,
+    start_time: u64,
+    end_time: u64,
+    span_kind: u8,
+    name: String,
+    attributes: Vec<KeyValue>,
+    events: Vec<Span_Event>,
+    links: Vec<Span_Link>,
 }
 
 impl<'a> SpanDecoder<'a> {
     /// new decodes the encoded span and returns the decoded span.
-    pub fn new(src: &[u8]) -> SpanDecoder {
+    fn new(src: &[u8]) -> SpanDecoder {
         let mut decoder = SpanDecoder {
             reader: BufferReader::new(src),
             ..Default::default()

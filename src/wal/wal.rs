@@ -198,4 +198,140 @@ impl Wal {
         self.written_offset = 0;
         self.current_wal_file = file;
     }
+
+    pub fn sync(&self) {
+        self.current_wal_file
+            .sync_all()
+            .context(format!(
+                "error while syncing wal file {:?}",
+                &self.current_wal_id()
+            ))
+            .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::options::options::Options;
+    use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
+    use crate::proto::trace::{Span, Span_Event};
+    use crate::wal::wal_iterator::WalIterator;
+    use protobuf::{RepeatedField, SingularPtrField};
+    use rand::Rng;
+    use std::collections::HashMap;
+    use std::fs::create_dir_all;
+    use tempfile::tempdir;
+
+    fn get_tmp_option() -> Options {
+        let tmp_dir = tempdir().unwrap();
+        Options {
+            dir: tmp_dir.path().to_path_buf(),
+            shard_path: tmp_dir.path().to_path_buf().join("shard"),
+            wal_path: tmp_dir.path().to_path_buf().join("wal"),
+        }
+    }
+
+    fn generate_span(start_ts: u64) -> Span {
+        let mut span = Span::default();
+        span.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.start_time_unix_nano = start_ts;
+        span.end_time_unix_nano = start_ts + 1;
+        let mut event = Span_Event::default();
+        let mut kv = KeyValue::default();
+        kv.key = String::from("sup magic man");
+        let mut val = AnyValue::default();
+        val.value = Some(AnyValue_oneof_value::string_value(String::from(
+            "let's make it right",
+        )));
+        kv.value = SingularPtrField::from(Some(val));
+        let mut attributes = vec![kv.clone()];
+        // Let's add more event.
+        attributes.push(kv.clone());
+        attributes.push(kv.clone());
+        attributes.push(kv.clone());
+        attributes.push(kv.clone());
+        span.attributes = RepeatedField::from(attributes.clone());
+        event.attributes = RepeatedField::from(attributes.clone());
+        span.events = RepeatedField::from(vec![event.clone()]);
+        span.events.push(event.clone());
+        span.events.push(event.clone());
+        span.events.push(event.clone());
+        span.events.push(event.clone());
+        span.events.push(event.clone());
+        span
+    }
+    #[test]
+    fn test_wal_iterator() {
+        // Let's create multiple wal and check whether we abel replay the
+        // wal or not.
+        let opt = get_tmp_option();
+        create_dir_all(&opt.wal_path).unwrap();
+        let mut wal = Wal::new(opt.clone()).unwrap();
+
+        let mut wal_1_span_offsets = Vec::new();
+        // write 100 spans.
+        for i in 0..100 {
+            let req = wal.write_spans(generate_span(i));
+            wal_1_span_offsets.push(req.wal_offset);
+        }
+        // Write to file.
+        wal.submit_buffer_to_iou();
+        wal.wait_for_submitted_wal_span();
+        wal.sync();
+
+        // Check where we able to iterate all the spans that we written.
+        let itr = WalIterator::new(0, 0, HashMap::default(), opt.wal_path.clone()).unwrap();
+        let mut idx = 0;
+        for span in itr {
+            assert_eq!(span.start_time_unix_nano, idx);
+            idx += 1;
+        }
+        // Let's skip some head offset offset and see whether it's iterating right.
+        let itr = WalIterator::new(
+            0,
+            wal_1_span_offsets[2],
+            HashMap::default(),
+            opt.wal_path.clone(),
+        )
+        .unwrap();
+        let mut idx = 2;
+        for span in itr {
+            assert_eq!(span.start_time_unix_nano, idx);
+            idx += 1;
+        }
+
+        // Let's add one more file and see whether we iterating nicely.
+        wal.written_offset = 1025 << 20;
+        wal.change_wal_if_neccessary();
+        let mut wal_2_span_offsets = Vec::new();
+        // write 100 spans.
+        for i in 100..200 {
+            let req = wal.write_spans(generate_span(i));
+            wal_2_span_offsets.push(req.wal_offset);
+        }
+
+        // Check where we able to iterate all the spans that we written.
+        let itr = WalIterator::new(0, 0, HashMap::default(), opt.wal_path.clone()).unwrap();
+        let mut idx = 0;
+        for span in itr {
+            assert_eq!(span.start_time_unix_nano, idx);
+            idx += 1;
+        }
+
+        // Let's skip some offsets in the wal files.
+        let mut offsets_to_be_skipped = HashMap::new();
+        offsets_to_be_skipped.insert(1, wal_1_span_offsets[2]);
+        offsets_to_be_skipped.insert(2, wal_2_span_offsets[2]);
+        let itr = WalIterator::new(0, 0, HashMap::default(), opt.wal_path.clone()).unwrap();
+        let mut idx = 0;
+        for span in itr {
+            if idx == 2 || idx == 102 {
+                continue;
+            }
+            assert_eq!(span.start_time_unix_nano, idx);
+            idx += 1;
+        }
+    }
 }

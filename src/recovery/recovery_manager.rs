@@ -15,10 +15,10 @@ use crate::options::options::Options;
 use crate::proto::types::WalOffsets;
 use crate::segment::segment_file::SegmentFile;
 use crate::utils::utils::{get_file_ids, read_files_in_dir};
+use crate::wal::wal_iterator::WalIterator;
 use anyhow::Context;
 use std::collections::HashMap;
 use std::fs::{remove_file, File};
-
 pub struct RecoveryManager {
     opt: Options,
 }
@@ -104,6 +104,16 @@ impl RecoveryManager {
         // Now we have from which wal and wal offset that needs to replayed. Also, we
         // got offset that needs to be skipped because, those entries are already persisted
         // in the previous segment files.
+        if wal_id == u64::MAX {
+            wal_id = 0;
+        }
+        let wal_itr = WalIterator::new(
+            wal_id,
+            wal_offset,
+            delayed_wal_offsets,
+            self.opt.wal_path.clone(),
+        );
+        for span_buf in wal_itr {}
     }
 
     /// repair_segment_files remove all the invalid segment files. This is a dangerous function.
@@ -145,7 +155,7 @@ impl RecoveryManager {
             }
         }
 
-        let mut segment_file_ids = self.get_segment_file_ids();
+        let segment_file_ids = self.get_segment_file_ids();
         // We have successfully removed all the unnecessary files.
         // Now, remove all the disjoint files.
         let mut disjointed_idx: usize = usize::MAX;
@@ -183,7 +193,6 @@ impl RecoveryManager {
 
     fn get_segment_file_ids(&self) -> Vec<u64> {
         let segment_file_paths = read_files_in_dir(&self.opt.shard_path, "segment").unwrap();
-        let mut segment_file_ids = get_file_ids(&segment_file_paths);
-        segment_file_ids
+        get_file_ids(&segment_file_paths)
     }
 }

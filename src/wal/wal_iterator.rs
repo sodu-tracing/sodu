@@ -11,9 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use crate::encoder::decoder::decode_span;
+use crate::proto::trace::Span;
 use crate::proto::types::WalOffsets;
 use crate::utils::utils::{get_file_ids, read_files_in_dir};
 use anyhow::Context;
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, ErrorKind, Read, Seek, SeekFrom};
@@ -30,7 +33,7 @@ pub struct WalIterator {
 }
 
 impl WalIterator {
-    fn new(
+    pub fn new(
         head_wal_id: u64,
         head_wal_offset: u64,
         offsets_to_be_skipped: HashMap<u64, WalOffsets>,
@@ -45,7 +48,7 @@ impl WalIterator {
         if wal_files.len() == 0 {
             return None;
         }
-        let mut wal_ids = get_file_ids(&wal_files);
+        let wal_ids = get_file_ids(&wal_files);
         // Remove all the wal id which are lesser than head wal id. Since those wal files
         // are persisted in the disk.
         let mut wal_ids: Vec<u64> = wal_ids
@@ -55,7 +58,7 @@ impl WalIterator {
         wal_ids.sort();
         // take the first wal file.
         let wal_id = wal_ids.pop().unwrap();
-        let mut wal_file = File::open(&wal_path.join(format!("{:?}", wal_id))).unwrap();
+        let mut wal_file = File::open(&wal_path.join(format!("{:?}.wal", wal_id))).unwrap();
         // Seek to the correct offset.
         if head_wal_offset != 0 {
             wal_file.seek(SeekFrom::Start(head_wal_offset)).unwrap();
@@ -73,7 +76,7 @@ impl WalIterator {
 }
 
 impl Iterator for WalIterator {
-    type Item = u64;
+    type Item = Span;
     fn next(&mut self) -> Option<Self::Item> {
         let offset = self.current_wal_offset;
         let mut size_buf: [u8; 5] = [0; 5];
@@ -99,11 +102,18 @@ impl Iterator for WalIterator {
         }
         let (size, rem) = decode::u32(&size_buf).unwrap();
         // Go back to the remaining place.
-        self.current_wal_reader.seek_relative(-(rem.len() as i64));
+        self.current_wal_reader
+            .seek_relative(-(rem.len() as i64))
+            .unwrap();
         let mut buf = vec![0; size as usize];
-        self.current_wal_reader.read_exact(&mut buf);
-        // advance the offset.
-        self.current_wal_offset == (5 - rem.len() + size as usize) as u64;
-        None
+        self.current_wal_reader.read_exact(&mut buf).unwrap();
+        self.current_wal_offset += (size_buf.len() - rem.len()) as u64 + buf.len() as u64;
+        // Skip the current offset if it's skipppable.
+        if let Some(wal_offsets) = self.offsets_to_be_skipped.get(&self.current_wal_id) {
+            if wal_offsets.offsets.contains(&offset) {
+                return self.next();
+            }
+        }
+        Some(decode_span(&buf))
     }
 }
