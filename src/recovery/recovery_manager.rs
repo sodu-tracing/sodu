@@ -11,10 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use crate::encoder::decoder::decode_span;
+use crate::ingester::segment_ingester::SegmentIngester;
 use crate::options::options::Options;
 use crate::proto::types::WalOffsets;
 use crate::segment::segment_file::SegmentFile;
-use crate::utils::utils::{get_file_ids, read_files_in_dir};
+use crate::utils::utils::{extract_indices_from_span, get_file_ids, read_files_in_dir};
+use crate::wal::wal::EncodedRequest;
 use crate::wal::wal_iterator::WalIterator;
 use anyhow::Context;
 use std::collections::HashMap;
@@ -31,8 +34,8 @@ impl RecoveryManager {
         // now get the wal offset from the last segment file.
         let mut segment_file_ids = self.get_segment_file_ids();
         segment_file_ids.reverse();
-        let mut wal_id = u64::MAX;
-        let mut wal_offset = u64::MAX;
+        let mut wal_id = u64::MIN;
+        let mut wal_offset = u64::MIN;
         let mut delayed_wal_offsets: HashMap<u64, WalOffsets> = HashMap::default();
         if segment_file_ids.len() != 0 {
             let file = File::open(
@@ -104,20 +107,35 @@ impl RecoveryManager {
         // Now we have from which wal and wal offset that needs to replayed. Also, we
         // got offset that needs to be skipped because, those entries are already persisted
         // in the previous segment files.
-        if wal_id == u64::MAX {
-            wal_id = 0;
-        }
         let wal_itr = WalIterator::new(
             wal_id,
             wal_offset,
             delayed_wal_offsets,
             self.opt.wal_path.clone(),
         );
-        for span_buf in wal_itr {}
+        if let None = wal_itr {
+            return;
+        }
+        let wal_itr = wal_itr.unwrap();
+        let mut ingester = SegmentIngester::new(self.opt.shard_path.clone());
+        for (encoded_buf, wal_id, offset) in wal_itr {
+            let span = decode_span(&encoded_buf);
+            let indices = extract_indices_from_span(&span);
+            let req = EncodedRequest {
+                indices: indices,
+                start_ts: span.start_time_unix_nano,
+                wal_offset: offset,
+                encoded_span: &encoded_buf[..],
+            };
+            ingester.push_span(wal_id, req);
+        }
+        // flush all segments to the disk.
+        ingester.flush_segment_if_necessary(true);
+        ingester.reclaim_submitted_builder_buffer();
     }
 
     /// repair_segment_files remove all the invalid segment files. This is a dangerous function.
-    /// considering our segment flush method. We can call this function confidently. But, if
+    /// Considering our segment flush method, We can call this function confidently. But, if
     /// the user delete some file in the segment. Then this system will crap out. So, it's
     /// upto the user to use it responsibly without doing any stupid chaos testing.
     fn repair_segment_files(&mut self) {

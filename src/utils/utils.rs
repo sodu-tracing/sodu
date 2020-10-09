@@ -11,11 +11,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use crate::proto::common::{AnyValue_oneof_value, KeyValue};
+use crate::proto::trace::Span;
 use anyhow::{Context, Result};
 use flexi_logger::Logger;
+use protobuf::RepeatedField;
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs::read_dir;
 use std::path::PathBuf;
+
 pub fn init_all_utils() {
     Logger::with_env_or_str("debug").start().unwrap();
 }
@@ -58,4 +63,44 @@ pub fn get_file_ids(paths: &Vec<PathBuf>) -> Vec<u64> {
     }
     file_ids.sort();
     file_ids
+}
+
+/// extract_indices_from_span returns indices for the given span.
+pub fn extract_indices_from_span(span: &Span) -> HashSet<String> {
+    let mut indices = HashSet::new();
+    extract_indices_from_attributes(&span.attributes, &mut indices);
+    // generate indices for events.
+    for event in &span.events {
+        extract_indices_from_attributes(&event.attributes, &mut indices);
+    }
+    // generate indices for links.
+    for link in &span.links {
+        extract_indices_from_attributes(&link.attributes, &mut indices);
+    }
+    indices
+}
+
+/// extract_indices_from_attributes extract indices for the given attributes.
+fn extract_indices_from_attributes(
+    attributes: &RepeatedField<KeyValue>,
+    indices: &mut HashSet<String>,
+) {
+    for attribute in attributes {
+        let value = attribute.value.as_ref().unwrap().value.as_ref().unwrap();
+        match value {
+            AnyValue_oneof_value::bool_value(val) => {
+                indices.insert(create_index_key(&attribute.key, val));
+            }
+            AnyValue_oneof_value::string_value(val) => {
+                indices.insert(create_index_key(&attribute.key, val));
+            }
+            AnyValue_oneof_value::int_value(val) => {
+                indices.insert(create_index_key(&attribute.key, val));
+            }
+            AnyValue_oneof_value::double_value(val) => {
+                indices.insert(create_index_key(&attribute.key, val));
+            }
+            _ => {}
+        }
+    }
 }

@@ -213,6 +213,7 @@ impl Wal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::encoder::decoder::decode_span;
     use crate::options::options::Options;
     use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
     use crate::proto::trace::{Span, Span_Event};
@@ -284,7 +285,8 @@ mod tests {
         // Check where we able to iterate all the spans that we written.
         let itr = WalIterator::new(0, 0, HashMap::default(), opt.wal_path.clone()).unwrap();
         let mut idx = 0;
-        for span in itr {
+        for (buf, _, _) in itr {
+            let span = decode_span(&buf[..]);
             assert_eq!(span.start_time_unix_nano, idx);
             idx += 1;
         }
@@ -297,7 +299,8 @@ mod tests {
         )
         .unwrap();
         let mut idx = 2;
-        for span in itr {
+        for (buf, _, _) in itr {
+            let span = decode_span(&buf[..]);
             assert_eq!(span.start_time_unix_nano, idx);
             idx += 1;
         }
@@ -315,7 +318,8 @@ mod tests {
         // Check where we able to iterate all the spans that we written.
         let itr = WalIterator::new(0, 0, HashMap::default(), opt.wal_path.clone()).unwrap();
         let mut idx = 0;
-        for span in itr {
+        for (buf, _, _) in itr {
+            let span = decode_span(&buf[..]);
             assert_eq!(span.start_time_unix_nano, idx);
             idx += 1;
         }
@@ -326,10 +330,11 @@ mod tests {
         offsets_to_be_skipped.insert(2, wal_2_span_offsets[2]);
         let itr = WalIterator::new(0, 0, HashMap::default(), opt.wal_path.clone()).unwrap();
         let mut idx = 0;
-        for span in itr {
+        for (buf, _, _) in itr {
             if idx == 2 || idx == 102 {
                 continue;
             }
+            let span = decode_span(&buf[..]);
             assert_eq!(span.start_time_unix_nano, idx);
             idx += 1;
         }

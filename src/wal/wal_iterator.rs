@@ -11,8 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use crate::encoder::decoder::decode_span;
-use crate::proto::trace::Span;
+
 use crate::proto::types::WalOffsets;
 use crate::utils::utils::{get_file_ids, read_files_in_dir};
 use anyhow::Context;
@@ -33,6 +32,8 @@ pub struct WalIterator {
 }
 
 impl WalIterator {
+    /// new return wal iterator and seeks to the head wal offset. So, caller can iterate from
+    /// the right wal offset.
     pub fn new(
         head_wal_id: u64,
         head_wal_offset: u64,
@@ -73,10 +74,15 @@ impl WalIterator {
             wal_dir_path: wal_path,
         })
     }
+
+    /// get_current_wal_id returns the current wal id.
+    fn get_current_wal_id(&self) -> u64 {
+        self.current_wal_id
+    }
 }
 
 impl Iterator for WalIterator {
-    type Item = Span;
+    type Item = (Vec<u8>, u64, u64);
     fn next(&mut self) -> Option<Self::Item> {
         let offset = self.current_wal_offset;
         let mut size_buf: [u8; 5] = [0; 5];
@@ -114,6 +120,6 @@ impl Iterator for WalIterator {
                 return self.next();
             }
         }
-        Some(decode_span(&buf))
+        Some((buf, offset, self.get_current_wal_id()))
     }
 }

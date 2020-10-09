@@ -15,6 +15,7 @@ use crate::buffer::buffer::Buffer;
 use crate::encoder::decoder::InplaceSpanDecoder;
 use crate::segment::segment::Segment;
 use crate::segment::segment_builder::SegmentBuilder;
+use crate::utils::utils::{get_file_ids, read_files_in_dir};
 use crate::wal::wal::EncodedRequest;
 use futures::io::IoSlice;
 use iou::IoUring;
@@ -59,13 +60,21 @@ impl SegmentIngester {
     /// new returns SegmentIngester instance.
     pub fn new(segments_path: PathBuf) -> SegmentIngester {
         fs::create_dir_all(&segments_path).unwrap();
+        // Get all the start id of the current segment.
+        let segment_file_path = read_files_in_dir(&segments_path, "segment").unwrap();
+        let mut segment_file_ids = get_file_ids(&segment_file_path);
+        let mut next_segment_id = 1;
+        if let Some(segment_id) = segment_file_ids.pop() {
+            next_segment_id = segment_id + 1;
+        }
+
         let iou = IoUring::new(50).unwrap();
         SegmentIngester {
             iou: iou,
             segments_path: segments_path,
             current_segment: Segment::new(),
             span_buffer: Buffer::with_size(1 << 20),
-            next_segment_id: 1,
+            next_segment_id: next_segment_id,
             submitted_builders: Vec::new(),
             submitted_iou_ids: HashSet::new(),
             builder_freelist: Vec::new(),
@@ -75,7 +84,7 @@ impl SegmentIngester {
 
     /// push span insert span to the ingester.
     pub fn push_span(&mut self, wal_id: u64, req: EncodedRequest) {
-        self.flush_segment_if_necessary();
+        self.flush_segment_if_necessary(false);
         self.span_buffer.clear();
         let inplace_decoder = InplaceSpanDecoder(req.encoded_span);
         let hashed_trace_id = inplace_decoder.hashed_trace_id();
@@ -96,10 +105,10 @@ impl SegmentIngester {
 
     /// flush_segment_if_necessary flushes the buffered segment. If it's crosses the grace period
     /// time.
-    fn flush_segment_if_necessary(&mut self) {
+    pub fn flush_segment_if_necessary(&mut self, force: bool) {
         // Flush segments if necessary. Calculate whether the current segment reached the threshold
         // size
-        if self.current_segment.segment_size() < 62 << 20 {
+        if self.current_segment.segment_size() < 62 << 20 && !force {
             return;
         }
         debug!(
@@ -114,14 +123,19 @@ impl SegmentIngester {
         // flush to the disk.
         loop {
             if let Some(past_segment) = self.buffered_segment.pop_front() {
-                // Check whether the past_segment older than five minutes. If's older than five minutes
-                // then flush to the disk.
-                let segment_finish_time =
-                    UNIX_EPOCH + Duration::from_nanos(past_segment.max_trace_start_ts());
-                let elapsed = segment_finish_time.elapsed().unwrap();
-                if elapsed.as_secs() / 60 < 5 {
-                    break;
+                // calculate grace period if it's not force flush.
+                if !force {
+                    // Check whether the past_segment older than five minutes. If's older than five minutes
+                    // then flush to the disk.
+                    let segment_finish_time =
+                        UNIX_EPOCH + Duration::from_nanos(past_segment.max_trace_start_ts());
+                    let elapsed = segment_finish_time.elapsed().unwrap();
+                    if elapsed.as_secs() / 60 < 5 {
+                        break;
+                    }
                 }
+                // TODO: This may run as if we are running in a sync way. We need some thorttling while
+                // flushing series of segments.
                 self.reclaim_submitted_builder_buffer();
                 // This segment is older than 5 minutes. So, let's flush this.
                 let mut builder = self.get_segment_builder();
@@ -165,7 +179,7 @@ impl SegmentIngester {
     }
 
     /// reclaim_submitted_builder_buffer reclaims the submitted builder buffer after it's completion.
-    fn reclaim_submitted_builder_buffer(&mut self) {
+    pub fn reclaim_submitted_builder_buffer(&mut self) {
         if self.submitted_iou_ids.len() == 0 {
             return;
         }
