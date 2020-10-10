@@ -42,7 +42,7 @@ impl<'a> InplaceSpanDecoder<'a> {
 
 /// decode_span decodes the given span to protobuf span.
 pub fn decode_span(src: &[u8]) -> Span {
-    let mut decoder = SpanDecoder::new(src);
+    let decoder = SpanDecoder::new(src);
     let mut span = Span::default();
     span.trace_id = decoder.trace_id.unwrap();
     span.span_id = decoder.span_id.unwrap();
@@ -146,6 +146,7 @@ impl<'a> SpanDecoder<'a> {
                 val.value = Some(AnyValue_oneof_value::string_value(
                     String::from_utf8_lossy(self.reader.read_slice().unwrap().unwrap()).to_string(),
                 ));
+                kv.value = SingularPtrField::some(val);
                 attributes.push(kv);
                 self.decode_attributes(attributes);
             }
@@ -162,6 +163,7 @@ impl<'a> SpanDecoder<'a> {
                         .try_into()
                         .unwrap(),
                 )));
+                kv.value = SingularPtrField::some(val);
                 attributes.push(kv);
                 self.decode_attributes(attributes);
             }
@@ -178,11 +180,12 @@ impl<'a> SpanDecoder<'a> {
                         .try_into()
                         .unwrap(),
                 )));
+                kv.value = SingularPtrField::some(val);
                 attributes.push(kv);
                 self.decode_attributes(attributes);
             }
             _ => {
-                unreachable!("yolo");
+                unreachable!("yolo yada what did you do wrong tiger");
             }
         }
     }
@@ -223,6 +226,8 @@ impl<'a> SpanDecoder<'a> {
             let mut attributes = Vec::new();
             self.decode_attributes(&mut attributes);
             link.attributes = RepeatedField::from(attributes);
+            self.links.push(link);
+            self.decode_link();
         });
     }
 }
@@ -274,5 +279,40 @@ mod tests {
         assert_eq!(decode.attributes.len(), 1);
         assert_eq!(decode.events.len(), 2);
         assert_eq!(decode.attributes[0].key, String::from("string kv"));
+    }
+
+    #[test]
+    fn test_decoding_deep_equal() {
+        let mut span = Span::default();
+        span.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.start_time_unix_nano = 200;
+        span.end_time_unix_nano = 203;
+        span.name = String::from("hello");
+        let mut kv = KeyValue::default();
+        kv.key = String::from("string kv");
+        let mut val = AnyValue::default();
+        val.value = Some(AnyValue_oneof_value::string_value(String::from(
+            "let's make it right",
+        )));
+        kv.value = SingularPtrField::from(Some(val));
+        span.attributes = RepeatedField::from(vec![kv.clone()]);
+        let mut event = Span_Event::default();
+        event.name = String::from("log 1");
+        event.time_unix_nano = 100;
+        event.attributes = RepeatedField::from(vec![kv.clone()]);
+        let mut events = vec![event.clone()];
+        event.name = String::from("log2");
+        events.push(event);
+        span.events = RepeatedField::from(events);
+        let mut link = Span_Link::default();
+        link.attributes = RepeatedField::from(vec![kv.clone()]);
+        link.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        link.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.links = RepeatedField::from(vec![link]);
+        let mut buffer = Buffer::with_size(2 << 20);
+        encode_span(&span, &mut buffer);
+        let decoded_span = decode_span(buffer.bytes_ref());
+        assert_eq!(span, decoded_span);
     }
 }

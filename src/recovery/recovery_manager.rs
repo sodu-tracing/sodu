@@ -22,15 +22,28 @@ use crate::wal::wal_iterator::WalIterator;
 use anyhow::Context;
 use std::collections::HashMap;
 use std::fs::{remove_file, File};
+
+/// RecoveryManager is used to repair crashed sodu.
 pub struct RecoveryManager {
+    /// opt holds the options of sodu.
     opt: Options,
 }
 
 impl RecoveryManager {
-    fn repair(&mut self) {
+    /// new returns the RecoveryManager.
+    pub fn new(opt: Options) -> RecoveryManager {
+        RecoveryManager { opt }
+    }
+
+    /// repair repairs the sodu if it's crashed and replays log and flushes the segments.
+    pub fn repair(&self) {
         // repair the segment files first. Because io_uring file flush is not sequential, so
         // we need to delete some flushed files as well.
         self.repair_segment_files();
+        self.replay_wal();
+    }
+
+    fn replay_wal(&self) {
         // now get the wal offset from the last segment file.
         let mut segment_file_ids = self.get_segment_file_ids();
         segment_file_ids.reverse();
@@ -119,6 +132,8 @@ impl RecoveryManager {
         let wal_itr = wal_itr.unwrap();
         let mut ingester = SegmentIngester::new(self.opt.shard_path.clone());
         for (encoded_buf, wal_id, offset) in wal_itr {
+            // TODO: may be we do want to skip the first iteration because,
+            // that is request is already persisted.
             let span = decode_span(&encoded_buf);
             let indices = extract_indices_from_span(&span);
             let req = EncodedRequest {
@@ -138,7 +153,7 @@ impl RecoveryManager {
     /// Considering our segment flush method, We can call this function confidently. But, if
     /// the user delete some file in the segment. Then this system will crap out. So, it's
     /// upto the user to use it responsibly without doing any stupid chaos testing.
-    fn repair_segment_files(&mut self) {
+    fn repair_segment_files(&self) {
         // First we need to check that all the segment files are in healthy
         // state.
         let segment_file_ids = self.get_segment_file_ids();
@@ -203,7 +218,7 @@ impl RecoveryManager {
             )
             .context(format!(
                 "unable to delete unhealthy segment file {:?}",
-                segment_file_ids[idx + 1]
+                segment_file_ids[idx]
             ))
             .unwrap();
         }
@@ -212,5 +227,73 @@ impl RecoveryManager {
     fn get_segment_file_ids(&self) -> Vec<u64> {
         let segment_file_paths = read_files_in_dir(&self.opt.shard_path, "segment").unwrap();
         get_file_ids(&segment_file_paths)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::wal::wal::tests::{generate_span, get_tmp_option};
+    use crate::wal::wal::Wal;
+    use std::fs::{create_dir_all, remove_file};
+    #[test]
+    fn test_segment_repair() {
+        let opt = get_tmp_option();
+        create_dir_all(&opt.wal_path).unwrap();
+        let mut ingester = SegmentIngester::new(opt.shard_path.clone());
+        let mut wal = Wal::new(opt.clone()).unwrap();
+        let wal_id = wal.current_wal_id();
+        let span = generate_span(1);
+        let req = wal.write_spans(span);
+        ingester.push_span(wal_id, req);
+        let span = generate_span(2);
+        let req = wal.write_spans(span);
+        ingester.push_span(wal_id, req);
+        ingester.flush_segment_if_necessary(true);
+        ingester.reclaim_submitted_builder_buffer();
+        // we need to see one segment file on the disk now.
+        let segment_files_path = read_files_in_dir(&opt.shard_path, "segment").unwrap();
+        assert_eq!(segment_files_path.len(), 1);
+        let segment_file_ids = get_file_ids(&segment_files_path);
+        assert_eq!(segment_file_ids[0], 1);
+        // Let's ingest few more entries.
+        let span = generate_span(3);
+        let req = wal.write_spans(span);
+        ingester.push_span(wal_id, req);
+        let span = generate_span(4);
+        let req = wal.write_spans(span);
+        ingester.push_span(wal_id, req);
+        ingester.flush_segment_if_necessary(true);
+        ingester.reclaim_submitted_builder_buffer();
+
+        let span = generate_span(5);
+        let req = wal.write_spans(span);
+        ingester.push_span(wal_id, req);
+        let span = generate_span(6);
+        let req = wal.write_spans(span);
+        ingester.push_span(wal_id, req);
+        ingester.flush_segment_if_necessary(true);
+        ingester.reclaim_submitted_builder_buffer();
+        wal.submit_buffer_to_iou();
+        wal.wait_for_submitted_wal_span();
+        // now we should have 3 segment files.
+        let segment_files_path = read_files_in_dir(&opt.shard_path, "segment").unwrap();
+        assert_eq!(segment_files_path.len(), 3);
+
+        // Let's remove segment file.
+        remove_file(&segment_files_path[1]).unwrap();
+        // Since we removed the 2nd file. recovery manager
+        // should delete the 3rd file as well. So, that
+        // it can replay from the begining.
+        let recovery_manager = RecoveryManager::new(opt.clone());
+        recovery_manager.repair_segment_files();
+        let segment_files_path = read_files_in_dir(&opt.shard_path, "segment").unwrap();
+        assert_eq!(segment_files_path.len(), 1);
+        let segment_file_ids = get_file_ids(&segment_files_path);
+        assert_eq!(segment_file_ids[0], 1);
+        recovery_manager.replay_wal();
+        // Now we should be able to new segment file.
+        let segment_files_path = read_files_in_dir(&opt.shard_path, "segment").unwrap();
+        assert_eq!(segment_files_path.len(), 2);
     }
 }

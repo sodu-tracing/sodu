@@ -56,7 +56,7 @@ impl Buffer {
     }
 
     /// write_raw_slice write the given slice to the underlying buffer.
-    pub fn write_raw_slice(&mut self, buf: &[u8]) {
+    pub fn write_raw_slice(&mut self, buf: &[u8]) -> usize {
         if self.inner.len() - self.position < buf.len() {
             self.inner.reserve(1);
             unsafe {
@@ -70,6 +70,7 @@ impl Buffer {
         // Increment the position to the new position.
 
         self.position = self.position + buf.len();
+        self.position - buf.len()
     }
 
     /// write_size writes the given size as varint32 to the buffer.

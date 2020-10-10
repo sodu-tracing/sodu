@@ -22,13 +22,21 @@ use std::mem;
 use std::u64;
 use unsigned_varint::encode;
 
+/// SegmentBuilder is used to build segment files.
 pub struct SegmentBuilder {
+    /// buffer holds the memory of the segment.
     buffer: Buffer,
+    /// trace_offsets cotains the offsets of all traces.
     trace_offsets: Vec<TraceIDOffset>,
+    /// chucks contains metadata of chunks.
     chunks: Vec<ChuckMetadata>,
+    /// current_chunk_offset is the offset of current chunk in the buffer.
     current_chunk_offset: usize,
+    /// current_chunk_min_start_ts is the min ts of the current chunk.
     current_chunk_min_start_ts: u64,
+    /// current_chunk_max_start_ts is the max ts of the current chunk.
     current_chunk_max_start_ts: u64,
+    /// trace_size_buffer is a temporary buffer used for encoding trace buffer.
     trace_size_buffer: [u8; 5],
 }
 
@@ -159,10 +167,10 @@ impl SegmentBuilder {
         segment_metadata.set_chunks(RepeatedField::from(chunks));
         // write the metadata to the buffer.
         let metadata_buf = segment_metadata.write_to_bytes().unwrap();
-        self.buffer.write_raw_slice(&metadata_buf[..]);
+        let offset = self.buffer.write_raw_slice(&metadata_buf[..]);
         // write the metadata size.
-        let metadata_size = metadata_buf.len() as u32;
-        self.buffer.write_raw_slice(&metadata_size.to_be_bytes());
+        let metadata_offset = offset as u32;
+        self.buffer.write_raw_slice(&metadata_offset.to_be_bytes());
         // replace the chunk back.
         let chunks = mem::replace(
             &mut segment_metadata.chunks,

@@ -211,7 +211,7 @@ impl Wal {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::encoder::decoder::decode_span;
     use crate::options::options::Options;
@@ -224,7 +224,7 @@ mod tests {
     use std::fs::create_dir_all;
     use tempfile::tempdir;
 
-    fn get_tmp_option() -> Options {
+    pub fn get_tmp_option() -> Options {
         let tmp_dir = tempdir().unwrap();
         Options {
             dir: tmp_dir.path().to_path_buf(),
@@ -233,7 +233,7 @@ mod tests {
         }
     }
 
-    fn generate_span(start_ts: u64) -> Span {
+    pub fn generate_span(start_ts: u64) -> Span {
         let mut span = Span::default();
         span.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
         span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();

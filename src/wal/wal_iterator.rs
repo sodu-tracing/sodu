@@ -22,12 +22,20 @@ use std::io::{BufReader, ErrorKind, Read, Seek, SeekFrom};
 use std::path::PathBuf;
 use unsigned_varint::decode;
 
+/// WalIterator is used to iterate wal files.
 pub struct WalIterator {
+    /// next_wal_ids contains the wal ids that needs to read after the current wal.
     next_wal_ids: Vec<u64>,
+    /// current_wal_reader is a buffer reader of wal file.
     current_wal_reader: BufReader<File>,
+    /// current_wal_id holds the the id of current wal.
     current_wal_id: u64,
+    /// current_wal_offset contains the current wal offset.
     current_wal_offset: u64,
+    /// offsets_to_be_skipped contains the wal offset that needs to be skipped as part
+    /// of wal iteration.
     offsets_to_be_skipped: HashMap<u64, WalOffsets>,
+    /// wal_dir_path is the path of wal directory.
     wal_dir_path: PathBuf,
 }
 
