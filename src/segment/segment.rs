@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
+use crate::proto::service::QueryRequest;
 use crate::segment::segment_iterator::SegmentIterator;
+use crate::utils::utils::create_index_key;
 use crate::wal::wal::EncodedRequest;
 use std::collections::{HashMap, HashSet};
 use std::u64;
@@ -149,6 +151,11 @@ impl Segment {
     pub fn max_trace_start_ts(&self) -> u64 {
         self.max_start_ts
     }
+
+    pub fn min_trace_start_ts(&self) -> u64 {
+        self.min_start_ts
+    }
+
     pub fn index(&self) -> &HashMap<String, HashSet<u64>> {
         &self.index
     }
@@ -164,6 +171,44 @@ impl Segment {
         // sort the start_ts in descending order.
         trace_offsets.sort_by(|a, b| b.0.cmp(&a.0));
         SegmentIterator::new(trace_offsets, &self.buffer)
+    }
+
+    /// get_iter_for_query returns segment iterator for the given query request.
+    pub fn get_iter_for_query(&self, req: &QueryRequest) -> Option<SegmentIterator> {
+        let start_ts = *req.start_ts.as_ref().unwrap();
+        let end_ts = *req.end_ts.as_ref().unwrap();
+        let mut filtered_trace_id: HashSet<u64> = HashSet::new();
+        // Filter trace ids for the given tags.
+        for (key, val) in &req.tags {
+            let index_key = create_index_key(key, val);
+            if let Some(trace_ids) = self.index().get(&index_key) {
+                filtered_trace_id.extend(trace_ids);
+            }
+        }
+        // If there there is no trace id for the given tags. just return None.
+        if req.tags.len() != 0 && filtered_trace_id.len() == 0 {
+            return None;
+        }
+        // Now filter trace offset that needs to be iterated.
+        let mut trace_offsets = Vec::with_capacity(self.trace_offsets.len());
+        for (trace_id, trace_offset) in &self.trace_offsets {
+            // skip traces which is not part of filtered trace_ids
+            if filtered_trace_id.len() != 0 && !filtered_trace_id.contains(trace_id) {
+                continue;
+            }
+            // skip trace offset if it's not falling in the given time range.
+            if trace_offset.0 > start_ts || trace_offset.0 < end_ts {
+                continue;
+            }
+            trace_offsets.push(trace_offset.clone());
+        }
+        // Simply return None if there is no trace offset to iterate.
+        if trace_offsets.len() == 0 {
+            return None;
+        }
+        // sort the start_ts in descending order.
+        trace_offsets.sort_by(|a, b| b.0.cmp(&a.0));
+        Some(SegmentIterator::new(trace_offsets, &self.buffer))
     }
 }
 

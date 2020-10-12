@@ -13,6 +13,7 @@
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
 use crate::encoder::decoder::InplaceSpanDecoder;
+use crate::proto::service::QueryRequest;
 use crate::segment::segment::Segment;
 use crate::segment::segment_builder::SegmentBuilder;
 use crate::utils::utils::{get_file_ids, read_files_in_dir};
@@ -225,6 +226,28 @@ impl SegmentIngester {
         self.next_segment_id += 1;
         File::create(&segment_path)
             .expect(&format!("unable to create segment file {:?}", segment_path))
+    }
+
+    /// get_segments_for_query
+    pub fn get_segments_for_query(&self, req: &QueryRequest) -> Vec<&Segment> {
+        let mut segments = Vec::new();
+        let req_start_ts = req.start_ts.unwrap();
+        // Check whether the current segment falls in the time range.
+        if self.current_segment.max_trace_start_ts() <= req_start_ts
+            || self.current_segment.min_trace_start_ts() >= req_start_ts
+        {
+            segments.push(&self.current_segment);
+        }
+
+        // Now, iterate over buffered segments.
+        for bufferd_segment in &self.buffered_segment {
+            if bufferd_segment.max_trace_start_ts() <= req_start_ts
+                || bufferd_segment.min_trace_start_ts() >= req_start_ts
+            {
+                segments.push(bufferd_segment);
+            }
+        }
+        segments
     }
 }
 

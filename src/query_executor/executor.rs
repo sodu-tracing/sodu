@@ -13,9 +13,19 @@
 // limitations under the License.
 
 use crate::ingester::segment_ingester::SegmentIngester;
+use crate::proto::service::QueryRequest;
 use parking_lot::Mutex;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct QueryExecutor {
     ingester: Arc<Mutex<SegmentIngester>>,
+}
+
+impl QueryExecutor {
+    pub fn query(&self, req: QueryRequest) {
+        // Find all the segments for the given ts.
+        let ingester = self.ingester.lock();
+        let in_memeory_segments = ingester.get_segments_for_query(&req);
+    }
 }
