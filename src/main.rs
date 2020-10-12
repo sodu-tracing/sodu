@@ -22,6 +22,7 @@ mod encoder;
 mod ingester;
 mod options;
 mod proto;
+mod query_executor;
 mod recovery;
 mod segment;
 mod server;

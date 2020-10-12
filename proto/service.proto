@@ -1,0 +1,20 @@
+message QueryRequest {
+    optional string service_name = 1;
+    optional string operation_name = 2;
+    map<string, string> tags = 3;
+    required uint64 start_ts = 4;
+    required uint64 end_ts = 5;
+}
+
+message InternalTrace {
+    required uint64 start_ts = 1;
+    repeated bytes spans = 2;
+}
+
+message QueryResponse {
+    repeated  InternalTrace traces = 1;
+}
+
+service SoduStorage {
+    rpc QueryTrace (QueryRequest) returns (QueryResponse) {}
+}
