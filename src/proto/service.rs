@@ -373,7 +373,7 @@ impl ::protobuf::reflect::ProtobufValue for QueryRequest {
 pub struct InternalTrace {
     // message fields
     pub start_ts: ::std::option::Option<u64>,
-    pub spans: ::protobuf::RepeatedField<::std::vec::Vec<u8>>,
+    pub trace: ::protobuf::SingularField<::std::vec::Vec<u8>>,
     // special fields
     #[cfg_attr(feature = "with-serde", serde(skip))]
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -411,35 +411,49 @@ impl InternalTrace {
         self.start_ts = ::std::option::Option::Some(v);
     }
 
-    // repeated bytes spans = 2;
+    // required bytes trace = 2;
 
 
-    pub fn get_spans(&self) -> &[::std::vec::Vec<u8>] {
-        &self.spans
+    pub fn get_trace(&self) -> &[u8] {
+        match self.trace.as_ref() {
+            Some(v) => &v,
+            None => &[],
+        }
     }
-    pub fn clear_spans(&mut self) {
-        self.spans.clear();
+    pub fn clear_trace(&mut self) {
+        self.trace.clear();
+    }
+
+    pub fn has_trace(&self) -> bool {
+        self.trace.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_spans(&mut self, v: ::protobuf::RepeatedField<::std::vec::Vec<u8>>) {
-        self.spans = v;
+    pub fn set_trace(&mut self, v: ::std::vec::Vec<u8>) {
+        self.trace = ::protobuf::SingularField::some(v);
     }
 
     // Mutable pointer to the field.
-    pub fn mut_spans(&mut self) -> &mut ::protobuf::RepeatedField<::std::vec::Vec<u8>> {
-        &mut self.spans
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_trace(&mut self) -> &mut ::std::vec::Vec<u8> {
+        if self.trace.is_none() {
+            self.trace.set_default();
+        }
+        self.trace.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_spans(&mut self) -> ::protobuf::RepeatedField<::std::vec::Vec<u8>> {
-        ::std::mem::replace(&mut self.spans, ::protobuf::RepeatedField::new())
+    pub fn take_trace(&mut self) -> ::std::vec::Vec<u8> {
+        self.trace.take().unwrap_or_else(|| ::std::vec::Vec::new())
     }
 }
 
 impl ::protobuf::Message for InternalTrace {
     fn is_initialized(&self) -> bool {
         if self.start_ts.is_none() {
+            return false;
+        }
+        if self.trace.is_none() {
             return false;
         }
         true
@@ -457,7 +471,7 @@ impl ::protobuf::Message for InternalTrace {
                     self.start_ts = ::std::option::Option::Some(tmp);
                 },
                 2 => {
-                    ::protobuf::rt::read_repeated_bytes_into(wire_type, is, &mut self.spans)?;
+                    ::protobuf::rt::read_singular_bytes_into(wire_type, is, &mut self.trace)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -474,9 +488,9 @@ impl ::protobuf::Message for InternalTrace {
         if let Some(v) = self.start_ts {
             my_size += ::protobuf::rt::value_size(1, v, ::protobuf::wire_format::WireTypeVarint);
         }
-        for value in &self.spans {
-            my_size += ::protobuf::rt::bytes_size(2, &value);
-        };
+        if let Some(ref v) = self.trace.as_ref() {
+            my_size += ::protobuf::rt::bytes_size(2, &v);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -486,9 +500,9 @@ impl ::protobuf::Message for InternalTrace {
         if let Some(v) = self.start_ts {
             os.write_uint64(1, v)?;
         }
-        for v in &self.spans {
+        if let Some(ref v) = self.trace.as_ref() {
             os.write_bytes(2, &v)?;
-        };
+        }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -532,10 +546,10 @@ impl ::protobuf::Message for InternalTrace {
                 |m: &InternalTrace| { &m.start_ts },
                 |m: &mut InternalTrace| { &mut m.start_ts },
             ));
-            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                "spans",
-                |m: &InternalTrace| { &m.spans },
-                |m: &mut InternalTrace| { &mut m.spans },
+            fields.push(::protobuf::reflect::accessor::make_singular_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "trace",
+                |m: &InternalTrace| { &m.trace },
+                |m: &mut InternalTrace| { &mut m.trace },
             ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<InternalTrace>(
                 "InternalTrace",
@@ -554,7 +568,7 @@ impl ::protobuf::Message for InternalTrace {
 impl ::protobuf::Clear for InternalTrace {
     fn clear(&mut self) {
         self.start_ts = ::std::option::Option::None;
-        self.spans.clear();
+        self.trace.clear();
         self.unknown_fields.clear();
     }
 }
@@ -748,8 +762,8 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     tTs\x12\x15\n\x06end_ts\x18\x05\x20\x02(\x04R\x05endTs\x1a7\n\tTagsEntry\
     \x12\x10\n\x03key\x18\x01\x20\x01(\tR\x03key\x12\x14\n\x05value\x18\x02\
     \x20\x01(\tR\x05value:\x028\x01\"@\n\rInternalTrace\x12\x19\n\x08start_t\
-    s\x18\x01\x20\x02(\x04R\x07startTs\x12\x14\n\x05spans\x18\x02\x20\x03(\
-    \x0cR\x05spans\"7\n\rQueryResponse\x12&\n\x06traces\x18\x01\x20\x03(\x0b\
+    s\x18\x01\x20\x02(\x04R\x07startTs\x12\x14\n\x05trace\x18\x02\x20\x02(\
+    \x0cR\x05trace\"7\n\rQueryResponse\x12&\n\x06traces\x18\x01\x20\x03(\x0b\
     2\x0e.InternalTraceR\x06traces2<\n\x0bSoduStorage\x12-\n\nQueryTrace\x12\
     \r.QueryRequest\x1a\x0e.QueryResponse\"\0\
 ";

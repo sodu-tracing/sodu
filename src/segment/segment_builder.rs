@@ -74,8 +74,7 @@ impl SegmentBuilder {
         // Write the all the spans of this trace.
         let offset = self.buffer.size();
         // Write the trace size.
-        let trace_size_buf = encode::u32(trace_size as u32, &mut self.trace_size_buffer);
-        self.buffer.write_raw_slice(trace_size_buf);
+        self.buffer.write_size(trace_size as u32);
         for (idx, span) in trace.into_iter().enumerate() {
             // Write the first span with trace_id. This will give us
             // little bit of compression.

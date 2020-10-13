@@ -38,6 +38,18 @@ impl<'a> InplaceSpanDecoder<'a> {
         &self.0[..16].hash(&mut hasher);
         hasher.finish()
     }
+
+    pub fn start_ts(&self) -> u64 {
+        // skipping trace_id and span id. Moving the offset to parent span id.
+        let mut offset = 16 + 16;
+        if self.0[offset] == PARENT_SPAN_ID_EXIST {
+            // consume offset for parent span id.
+            offset += 16
+        }
+        // consume offset for PARENT_SPAN_ID_EXIST
+        offset += 1;
+        u64::from_be_bytes(self.0[offset..offset + 8].try_into().unwrap())
+    }
 }
 
 /// decode_span decodes the given span to protobuf span.
@@ -314,5 +326,27 @@ mod tests {
         encode_span(&span, &mut buffer);
         let decoded_span = decode_span(buffer.bytes_ref());
         assert_eq!(span, decoded_span);
+    }
+
+    #[test]
+    fn test_inplace_decoder() {
+        let mut span = Span::default();
+        span.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.start_time_unix_nano = 200;
+        span.end_time_unix_nano = 203;
+        let mut buffer = Buffer::with_size(2 << 20);
+        encode_span(&span, &mut buffer);
+        let decoder = InplaceSpanDecoder(buffer.bytes_ref());
+        assert_eq!(decoder.start_ts(), 200);
+        span.trace_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.parent_span_id = rand::thread_rng().gen::<[u8; 16]>().to_vec();
+        span.start_time_unix_nano = 200;
+        span.end_time_unix_nano = 203;
+        let mut buffer = Buffer::with_size(2 << 20);
+        encode_span(&span, &mut buffer);
+        let decoder = InplaceSpanDecoder(buffer.bytes_ref());
+        assert_eq!(decoder.start_ts(), 200);
     }
 }

@@ -13,3 +13,4 @@
 // limitations under the License.
 pub mod buffer;
 pub mod buffer_reader;
+pub mod consumed_buffer_reader;

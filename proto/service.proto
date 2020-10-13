@@ -8,7 +8,7 @@ message QueryRequest {
 
 message InternalTrace {
     required uint64 start_ts = 1;
-    repeated bytes spans = 2;
+    required bytes trace = 2;
 }
 
 message QueryResponse {
