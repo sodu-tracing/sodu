@@ -16,6 +16,7 @@ use crate::proto::types::WalOffsets;
 use crate::utils::utils::{get_file_ids, read_files_in_dir};
 use anyhow::Context;
 
+use log::debug;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, ErrorKind, Read, Seek, SeekFrom};
@@ -48,6 +49,10 @@ impl WalIterator {
         offsets_to_be_skipped: HashMap<u64, WalOffsets>,
         wal_path: PathBuf,
     ) -> Option<WalIterator> {
+        debug!(
+            "starting wal iterator with head wal id {:?} and head wal offset {:?}",
+            head_wal_id, head_wal_offset
+        );
         // Let's get all the wal files.
         let wal_files = read_files_in_dir(&wal_path, "wal")
             .context("unable to read files in wal directory")
@@ -128,6 +133,6 @@ impl Iterator for WalIterator {
                 return self.next();
             }
         }
-        Some((buf, offset, self.get_current_wal_id()))
+        Some((buf, self.get_current_wal_id(), offset))
     }
 }

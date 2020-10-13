@@ -20,8 +20,10 @@ use crate::utils::utils::{extract_indices_from_span, get_file_ids, read_files_in
 use crate::wal::wal::EncodedRequest;
 use crate::wal::wal_iterator::WalIterator;
 use anyhow::Context;
+use log::{debug, info};
 use std::collections::HashMap;
 use std::fs::{remove_file, File};
+use std::time::SystemTime;
 
 /// RecoveryManager is used to repair crashed sodu.
 pub struct RecoveryManager {
@@ -44,6 +46,7 @@ impl RecoveryManager {
     }
 
     fn replay_wal(&self) {
+        debug!("replaying wal");
         // now get the wal offset from the last segment file.
         let mut segment_file_ids = self.get_segment_file_ids();
         segment_file_ids.reverse();
@@ -73,6 +76,7 @@ impl RecoveryManager {
             wal_offset = offset_metadata.1;
             delayed_wal_offsets = offset_metadata.2;
         }
+        let start_time = SystemTime::now();
         // Now it's time to find delayed offset that is greater than the current wal_id.
         for idx in 1..segment_file_ids.len() {
             // Filter all the delayed wal id which is greater than current wal id.
@@ -116,6 +120,10 @@ impl RecoveryManager {
                 }
             }
         }
+        info!(
+            "time taken to generate delayed wal offset to replay wal {:?}",
+            start_time.elapsed().unwrap().as_millis()
+        );
 
         // Now we have from which wal and wal offset that needs to replayed. Also, we
         // got offset that needs to be skipped because, those entries are already persisted

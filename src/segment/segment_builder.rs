@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
-use crate::proto::types::{ChuckMetadata, WalOffsets};
+use crate::proto::types::{ChunkMetadata, WalOffsets};
 use crate::proto::types::{SegmentMetadata, TraceIDOffset, TraceIds};
 use protobuf::{Message, RepeatedField};
 use std::collections::hash_map::DefaultHasher;
@@ -29,7 +29,7 @@ pub struct SegmentBuilder {
     /// trace_offsets cotains the offsets of all traces.
     trace_offsets: Vec<TraceIDOffset>,
     /// chucks contains metadata of chunks.
-    chunks: Vec<ChuckMetadata>,
+    chunks: Vec<ChunkMetadata>,
     /// current_chunk_offset is the offset of current chunk in the buffer.
     current_chunk_offset: usize,
     /// current_chunk_min_start_ts is the min ts of the current chunk.
@@ -99,7 +99,7 @@ impl SegmentBuilder {
 
     fn finish_chunk(&mut self) {
         // Create chunk metadata.
-        let mut chunk_metadata = ChuckMetadata::default();
+        let mut chunk_metadata = ChunkMetadata::default();
         chunk_metadata.set_max_start_ts(self.current_chunk_max_start_ts);
         chunk_metadata.set_min_start_ts(self.current_chunk_min_start_ts);
         chunk_metadata.set_offset(self.current_chunk_offset as u32);

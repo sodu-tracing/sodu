@@ -131,7 +131,8 @@ impl SegmentIngester {
                     let segment_finish_time =
                         UNIX_EPOCH + Duration::from_nanos(past_segment.max_trace_start_ts());
                     let elapsed = segment_finish_time.elapsed().unwrap();
-                    if elapsed.as_secs() / 60 < 5 {
+                    if elapsed.as_secs() / 60 < 1 {
+                        debug!("skipping the segment flush since the it it's in the grace period. elapsed time {:?}", elapsed.as_secs());
                         break;
                     }
                 }

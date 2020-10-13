@@ -25,7 +25,7 @@
 
 #[derive(PartialEq,Clone,Default)]
 #[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
-pub struct ChuckMetadata {
+pub struct ChunkMetadata {
     // message fields
     pub min_start_ts: ::std::option::Option<u64>,
     pub max_start_ts: ::std::option::Option<u64>,
@@ -39,14 +39,14 @@ pub struct ChuckMetadata {
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a ChuckMetadata {
-    fn default() -> &'a ChuckMetadata {
-        <ChuckMetadata as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a ChunkMetadata {
+    fn default() -> &'a ChunkMetadata {
+        <ChunkMetadata as ::protobuf::Message>::default_instance()
     }
 }
 
-impl ChuckMetadata {
-    pub fn new() -> ChuckMetadata {
+impl ChunkMetadata {
+    pub fn new() -> ChunkMetadata {
         ::std::default::Default::default()
     }
 
@@ -152,7 +152,7 @@ impl ChuckMetadata {
     }
 }
 
-impl ::protobuf::Message for ChuckMetadata {
+impl ::protobuf::Message for ChunkMetadata {
     fn is_initialized(&self) -> bool {
         if self.min_start_ts.is_none() {
             return false;
@@ -282,8 +282,8 @@ impl ::protobuf::Message for ChuckMetadata {
         Self::descriptor_static()
     }
 
-    fn new() -> ChuckMetadata {
-        ChuckMetadata::new()
+    fn new() -> ChunkMetadata {
+        ChunkMetadata::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -292,44 +292,44 @@ impl ::protobuf::Message for ChuckMetadata {
             let mut fields = ::std::vec::Vec::new();
             fields.push(::protobuf::reflect::accessor::make_option_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                 "min_start_ts",
-                |m: &ChuckMetadata| { &m.min_start_ts },
-                |m: &mut ChuckMetadata| { &mut m.min_start_ts },
+                |m: &ChunkMetadata| { &m.min_start_ts },
+                |m: &mut ChunkMetadata| { &mut m.min_start_ts },
             ));
             fields.push(::protobuf::reflect::accessor::make_option_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                 "max_start_ts",
-                |m: &ChuckMetadata| { &m.max_start_ts },
-                |m: &mut ChuckMetadata| { &mut m.max_start_ts },
+                |m: &ChunkMetadata| { &m.max_start_ts },
+                |m: &mut ChunkMetadata| { &mut m.max_start_ts },
             ));
             fields.push(::protobuf::reflect::accessor::make_option_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
                 "offset",
-                |m: &ChuckMetadata| { &m.offset },
-                |m: &mut ChuckMetadata| { &mut m.offset },
+                |m: &ChunkMetadata| { &m.offset },
+                |m: &mut ChunkMetadata| { &mut m.offset },
             ));
             fields.push(::protobuf::reflect::accessor::make_option_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
                 "length",
-                |m: &ChuckMetadata| { &m.length },
-                |m: &mut ChuckMetadata| { &mut m.length },
+                |m: &ChunkMetadata| { &m.length },
+                |m: &mut ChunkMetadata| { &mut m.length },
             ));
             fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
                 "trace_offsets",
-                |m: &ChuckMetadata| { &m.trace_offsets },
-                |m: &mut ChuckMetadata| { &mut m.trace_offsets },
+                |m: &ChunkMetadata| { &m.trace_offsets },
+                |m: &mut ChunkMetadata| { &mut m.trace_offsets },
             ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<ChuckMetadata>(
-                "ChuckMetadata",
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<ChunkMetadata>(
+                "ChunkMetadata",
                 fields,
                 file_descriptor_proto()
             )
         })
     }
 
-    fn default_instance() -> &'static ChuckMetadata {
-        static instance: ::protobuf::rt::LazyV2<ChuckMetadata> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(ChuckMetadata::new)
+    fn default_instance() -> &'static ChunkMetadata {
+        static instance: ::protobuf::rt::LazyV2<ChunkMetadata> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(ChunkMetadata::new)
     }
 }
 
-impl ::protobuf::Clear for ChuckMetadata {
+impl ::protobuf::Clear for ChunkMetadata {
     fn clear(&mut self) {
         self.min_start_ts = ::std::option::Option::None;
         self.max_start_ts = ::std::option::Option::None;
@@ -340,13 +340,13 @@ impl ::protobuf::Clear for ChuckMetadata {
     }
 }
 
-impl ::std::fmt::Debug for ChuckMetadata {
+impl ::std::fmt::Debug for ChunkMetadata {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for ChuckMetadata {
+impl ::protobuf::reflect::ProtobufValue for ChunkMetadata {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
     }
@@ -884,7 +884,7 @@ pub struct SegmentMetadata {
     // message fields
     pub min_start_ts: ::std::option::Option<u64>,
     pub max_start_ts: ::std::option::Option<u64>,
-    pub chunks: ::protobuf::RepeatedField<ChuckMetadata>,
+    pub chunks: ::protobuf::RepeatedField<ChunkMetadata>,
     pub index: ::std::collections::HashMap<::std::string::String, TraceIds>,
     pub sorted_trace_ids: ::protobuf::RepeatedField<TraceIDOffset>,
     pub delayed_span_wal_offsets: ::std::collections::HashMap<u64, WalOffsets>,
@@ -946,10 +946,10 @@ impl SegmentMetadata {
         self.max_start_ts = ::std::option::Option::Some(v);
     }
 
-    // repeated .ChuckMetadata chunks = 3;
+    // repeated .ChunkMetadata chunks = 3;
 
 
-    pub fn get_chunks(&self) -> &[ChuckMetadata] {
+    pub fn get_chunks(&self) -> &[ChunkMetadata] {
         &self.chunks
     }
     pub fn clear_chunks(&mut self) {
@@ -957,17 +957,17 @@ impl SegmentMetadata {
     }
 
     // Param is passed by value, moved
-    pub fn set_chunks(&mut self, v: ::protobuf::RepeatedField<ChuckMetadata>) {
+    pub fn set_chunks(&mut self, v: ::protobuf::RepeatedField<ChunkMetadata>) {
         self.chunks = v;
     }
 
     // Mutable pointer to the field.
-    pub fn mut_chunks(&mut self) -> &mut ::protobuf::RepeatedField<ChuckMetadata> {
+    pub fn mut_chunks(&mut self) -> &mut ::protobuf::RepeatedField<ChunkMetadata> {
         &mut self.chunks
     }
 
     // Take field
-    pub fn take_chunks(&mut self) -> ::protobuf::RepeatedField<ChuckMetadata> {
+    pub fn take_chunks(&mut self) -> ::protobuf::RepeatedField<ChunkMetadata> {
         ::std::mem::replace(&mut self.chunks, ::protobuf::RepeatedField::new())
     }
 
@@ -1268,7 +1268,7 @@ impl ::protobuf::Message for SegmentMetadata {
                 |m: &SegmentMetadata| { &m.max_start_ts },
                 |m: &mut SegmentMetadata| { &mut m.max_start_ts },
             ));
-            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<ChuckMetadata>>(
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<ChunkMetadata>>(
                 "chunks",
                 |m: &SegmentMetadata| { &m.chunks },
                 |m: &mut SegmentMetadata| { &mut m.chunks },
@@ -1339,7 +1339,7 @@ impl ::protobuf::reflect::ProtobufValue for SegmentMetadata {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x0btypes.proto\"\xa8\x01\n\rChuckMetadata\x12\x20\n\x0cmin_start_ts\
+    \n\x0btypes.proto\"\xa8\x01\n\rChunkMetadata\x12\x20\n\x0cmin_start_ts\
     \x18\x01\x20\x02(\x04R\nminStartTs\x12\x20\n\x0cmax_start_ts\x18\x02\x20\
     \x02(\x04R\nmaxStartTs\x12\x16\n\x06offset\x18\x03\x20\x02(\rR\x06offset\
     \x12\x16\n\x06length\x18\x04\x20\x02(\rR\x06length\x12#\n\rtrace_offsets\
@@ -1350,7 +1350,7 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x20\x03(\x04R\x07offsets\"\xb0\x04\n\x0fSegmentMetadata\x12\x20\n\x0cmi\
     n_start_ts\x18\x01\x20\x02(\x04R\nminStartTs\x12\x20\n\x0cmax_start_ts\
     \x18\x02\x20\x02(\x04R\nmaxStartTs\x12&\n\x06chunks\x18\x03\x20\x03(\x0b\
-    2\x0e.ChuckMetadataR\x06chunks\x121\n\x05index\x18\x04\x20\x03(\x0b2\x1b\
+    2\x0e.ChunkMetadataR\x06chunks\x121\n\x05index\x18\x04\x20\x03(\x0b2\x1b\
     .SegmentMetadata.IndexEntryR\x05index\x128\n\x10sorted_trace_ids\x18\x05\
     \x20\x03(\x0b2\x0e.TraceIDOffsetR\x0esortedTraceIds\x12d\n\x18delayed_sp\
     an_wal_offsets\x18\x06\x20\x03(\x0b2+.SegmentMetadata.DelayedSpanWalOffs\

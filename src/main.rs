@@ -39,6 +39,8 @@ fn main() {
     // Initialize all the global helper utils.
     utils::utils::init_all_utils();
     debug!("running in debug mode yo man");
+    let recovery_mngr = recovery::recovery_manager::RecoveryManager::new(opt.clone());
+    recovery_mngr.repair();
     // Create the ingester instance.
     let ingester = ingester::segment_ingester::SegmentIngester::new(opt.shard_path.clone());
     let protected_ingester = Arc::new(Mutex::new(ingester));

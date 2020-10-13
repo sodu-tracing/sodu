@@ -11,10 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use crate::proto::service::QueryRequest;
 use crate::proto::types::{SegmentMetadata, WalOffsets};
+use crate::segment::segment_file_iterator::SegmentFileIterator;
+use crate::utils::utils::create_index_key;
 use anyhow::{anyhow, Context, Result};
 use protobuf::parse_from_bytes;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 
@@ -49,9 +52,26 @@ impl SegmentFile {
         Ok(SegmentFile { file, metadata })
     }
 
+    /// get_iter_for_query returns segment iterator for the given query request.
+    pub fn get_iter_for_query(mut self, req: &QueryRequest) -> Option<SegmentFileIterator> {
+        // Filter trace_ids for tags.
+        let mut filtered_trace_ids = HashSet::new();
+        for (key, val) in &req.tags {
+            let index_key = create_index_key(key, val);
+            if let Some(trace_ids) = self.metadata.index.remove(&index_key) {
+                filtered_trace_ids.extend(trace_ids.trace_ids);
+            }
+        }
+        if req.tags.len() != 0 && filtered_trace_ids.len() == 0 {
+            return None;
+        }
+        None
+    }
+
     pub fn get_wal_offset(&self) -> (u64, u64, HashMap<u64, WalOffsets>) {
         let wal_offset = self.metadata.max_wal_offset.unwrap();
         let wal_id = self.metadata.max_wal_id.unwrap();
+        println!("wal id {:?} wal offset {:?}", wal_id, wal_offset);
         let delayed_offsets = self.metadata.delayed_span_wal_offsets.clone();
         (wal_id, wal_offset, delayed_offsets)
     }
