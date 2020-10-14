@@ -278,30 +278,12 @@ pub mod tests {
         spans
     }
 
-    pub fn gen_traces(mut start_ts: u64) -> Vec<Vec<Span>> {
+    pub fn gen_traces(mut start_ts: u64, num: usize) -> Vec<Vec<Span>> {
         let mut traces = Vec::new();
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
-        start_ts += 10;
-        traces.push(gen_trace(start_ts));
+        for _ in 0..num {
+            start_ts += 10;
+            traces.push(gen_trace(start_ts));
+        }
         traces
     }
     // #[test]

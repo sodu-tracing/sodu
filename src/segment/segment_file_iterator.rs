@@ -13,17 +13,16 @@
 // limitations under the License.
 use crate::buffer::consumed_buffer_reader::ConsumedBufferReader;
 use crate::encoder::decoder::InplaceSpanDecoder;
-use crate::proto::service::InternalTrace;
 use crate::proto::types::ChunkMetadata;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 
 pub struct SegmentFileIterator {
-    file: File,
-    filtered_trace_ids: HashSet<u64>,
-    chunks: Vec<ChunkMetadata>,
-    current_chunk_reader: Option<ConsumedBufferReader>,
+    pub file: File,
+    pub filtered_trace_ids: HashSet<u64>,
+    pub chunks: Vec<ChunkMetadata>,
+    pub current_chunk_reader: Option<ConsumedBufferReader>,
 }
 
 impl SegmentFileIterator {
@@ -44,7 +43,7 @@ impl SegmentFileIterator {
 }
 
 impl Iterator for SegmentFileIterator {
-    type Item = InternalTrace;
+    type Item = (u64, Vec<u8>);
     fn next(&mut self) -> Option<Self::Item> {
         // try to read from the current chunk reader.
         if let Some(reader) = &mut self.current_chunk_reader {
@@ -53,16 +52,13 @@ impl Iterator for SegmentFileIterator {
                 let decoder = InplaceSpanDecoder(trace);
                 // skip if the current trace if the trace id is not part of filtered
                 // traces.
+                let hashed_trace_id = decoder.hashed_trace_id();
                 if self.filtered_trace_ids.len() != 0
-                    && !self.filtered_trace_ids.contains(&decoder.hashed_trace_id())
+                    && !self.filtered_trace_ids.contains(&hashed_trace_id)
                 {
                     return self.next();
                 }
-                let start_ts = decoder.start_ts();
-                let mut internal_trace = InternalTrace::default();
-                internal_trace.set_start_ts(start_ts);
-                internal_trace.set_trace(trace.to_vec());
-                return Some(internal_trace);
+                return Some((hashed_trace_id, trace.to_vec()));
             }
         }
         // We read the previous chunk let's move to the next chunk.
@@ -80,5 +76,57 @@ impl Iterator for SegmentFileIterator {
         }
         // we don't have any more chunk to read. So, just return None.
         None
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use crate::buffer::buffer::Buffer;
+    use crate::proto::service::QueryRequest;
+    use crate::segment::segment::tests::gen_traces;
+    use crate::segment::segment::Segment;
+    use crate::segment::segment_builder::SegmentBuilder;
+    use crate::segment::segment_file::SegmentFile;
+    use crate::utils::utils::tests::get_encoded_req;
+    use std::collections::HashMap;
+    use std::fs::{create_dir_all, File};
+    use std::io::Write;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_segment_file_iterator() {
+        // create segment file.
+        let mut segment = Segment::new();
+        let traces = gen_traces(100, 1000);
+        let mut buffer = Buffer::with_size(3 << 20);
+        for trace in &traces {
+            for span in trace {
+                let (encoded_req, hashed_trace_id) = get_encoded_req(span, &mut buffer);
+                segment.put_span(hashed_trace_id, 0, encoded_req);
+            }
+        }
+        // let's build the segment file.
+        let mut builder = SegmentBuilder::new();
+        for (start_ts, trace) in segment.iter() {
+            builder.add_trace(start_ts, trace);
+        }
+        let segment_buffer = builder.finish_segment(segment.index(), 0, 0, &HashMap::default());
+
+        // write the segment buffer to file.
+        let tmp_dir = tempdir().unwrap();
+        create_dir_all(tmp_dir.path()).unwrap();
+        let segment_file_path = tmp_dir.path().join(format!("{}.segment", 1));
+        let mut file = File::create(&segment_file_path).unwrap();
+        file.write_all(segment_buffer.bytes_ref()).unwrap();
+        drop(file);
+        let mut file = File::open(&segment_file_path).unwrap();
+        let mut segment_file = SegmentFile::new(file).unwrap();
+        let req = QueryRequest::default();
+        let mut segment_itr = segment.iter();
+        for (hashed_trace_id, trace) in segment_file.get_iter_for_query(&req).unwrap() {
+            let (segment_hash_id, segment_trace) = segment_itr.next().unwrap();
+            assert_eq!(segment_hash_id, hashed_trace_id);
+        }
     }
 }

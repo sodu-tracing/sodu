@@ -65,7 +65,12 @@ impl SegmentFile {
         if req.tags.len() != 0 && filtered_trace_ids.len() == 0 {
             return None;
         }
-        None
+        Some(SegmentFileIterator {
+            file: self.file,
+            filtered_trace_ids: filtered_trace_ids,
+            chunks: self.metadata.chunks.to_vec(),
+            current_chunk_reader: None,
+        })
     }
 
     pub fn get_wal_offset(&self) -> (u64, u64, HashMap<u64, WalOffsets>) {

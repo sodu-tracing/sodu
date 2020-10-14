@@ -104,3 +104,31 @@ fn extract_indices_from_attributes(
         }
     }
 }
+
+/// this mod contains test helper functions for the whole project level.
+#[cfg(test)]
+pub mod tests {
+    use crate::buffer::buffer::Buffer;
+    use crate::encoder::decoder::InplaceSpanDecoder;
+    use crate::encoder::span::encode_span;
+    use crate::proto::trace::Span;
+    use crate::wal::wal::EncodedRequest;
+
+    /// get_encoded_req returns encoded request and hashed trace id.
+    pub fn get_encoded_req<'a>(
+        span: &Span,
+        mut buffer: &'a mut Buffer,
+    ) -> (EncodedRequest<'a>, u64) {
+        buffer.clear();
+        let indices = encode_span(&span, &mut buffer);
+        let req = EncodedRequest {
+            encoded_span: buffer.bytes_ref(),
+            indices: indices,
+            start_ts: span.start_time_unix_nano,
+            wal_offset: 0,
+        };
+        let decoder = InplaceSpanDecoder(req.encoded_span);
+        let hashed_id = decoder.hashed_trace_id();
+        (req, hashed_id)
+    }
+}
