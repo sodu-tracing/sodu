@@ -14,6 +14,7 @@
 use crate::buffer::buffer::Buffer;
 use crate::proto::types::{ChunkMetadata, WalOffsets};
 use crate::proto::types::{SegmentMetadata, TraceIDOffset, TraceIds};
+use crate::utils::utils::calculate_trace_size;
 use protobuf::{Message, RepeatedField};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
@@ -56,7 +57,7 @@ impl SegmentBuilder {
     pub fn add_trace(&mut self, start_ts: u64, trace: Vec<&[u8]>) {
         // Cut the chunk if the incoming trace can't fit into current
         // chunk.
-        let trace_size = self.calculate_trace_size(&trace);
+        let trace_size = calculate_trace_size(&trace);
         if self.should_finish_chunk(trace_size) {
             self.finish_chunk();
         }
@@ -108,19 +109,6 @@ impl SegmentBuilder {
         self.current_chunk_offset = self.buffer.size();
         self.current_chunk_min_start_ts = u64::MAX;
         self.current_chunk_max_start_ts = u64::MIN;
-    }
-
-    fn calculate_trace_size(&self, trace: &Vec<&[u8]>) -> usize {
-        let mut size: usize = 0;
-        // iter collect would have done this job simple why to allocate here :(
-        for (idx, span) in trace.iter().enumerate() {
-            if idx == 0 {
-                size += span.len();
-                continue;
-            }
-            size += span.len() - 16;
-        }
-        size
     }
 
     pub fn finish_segment(

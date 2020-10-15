@@ -61,7 +61,6 @@ pub fn get_file_ids(paths: &Vec<PathBuf>) -> Vec<u64> {
         let file_id = file_name.to_str().unwrap().parse::<u64>().unwrap();
         file_ids.push(file_id);
     }
-    file_ids.sort();
     file_ids
 }
 
@@ -105,6 +104,16 @@ fn extract_indices_from_attributes(
     }
 }
 
+pub struct TimeRange {
+    start_ts: u64,
+    end_ts: u64,
+}
+
+/// is_over_lapping tells that whether the requesting time range is in block time range or not.
+pub fn is_over_lapping(req: TimeRange, block: TimeRange) -> bool {
+    false
+}
+
 /// this mod contains test helper functions for the whole project level.
 #[cfg(test)]
 pub mod tests {
@@ -131,4 +140,18 @@ pub mod tests {
         let hashed_id = decoder.hashed_trace_id();
         (req, hashed_id)
     }
+}
+
+/// calculate_trace_size is used to calculate trace size from the list of spans.
+pub fn calculate_trace_size(trace: &Vec<&[u8]>) -> usize {
+    let mut size: usize = 0;
+    // iter collect would have done this job simple why to allocate here :(
+    for (idx, span) in trace.iter().enumerate() {
+        if idx == 0 {
+            size += span.len();
+            continue;
+        }
+        size += span.len() - 16;
+    }
+    size
 }

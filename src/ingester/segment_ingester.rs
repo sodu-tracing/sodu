@@ -64,6 +64,7 @@ impl SegmentIngester {
         // Get all the start id of the current segment.
         let segment_file_path = read_files_in_dir(&segments_path, "segment").unwrap();
         let mut segment_file_ids = get_file_ids(&segment_file_path);
+        segment_file_ids.sort();
         let mut next_segment_id = 1;
         if let Some(segment_id) = segment_file_ids.pop() {
             next_segment_id = segment_id + 1;
@@ -234,16 +235,16 @@ impl SegmentIngester {
         let mut segments = Vec::new();
         let req_start_ts = req.start_ts.unwrap();
         // Check whether the current segment falls in the time range.
-        if self.current_segment.max_trace_start_ts() <= req_start_ts
-            || self.current_segment.min_trace_start_ts() >= req_start_ts
+        if self.current_segment.max_trace_start_ts() >= req_start_ts
+            && self.current_segment.min_trace_start_ts() <= req_start_ts
         {
             segments.push(&self.current_segment);
         }
 
         // Now, iterate over buffered segments.
         for bufferd_segment in &self.buffered_segment {
-            if bufferd_segment.max_trace_start_ts() <= req_start_ts
-                || bufferd_segment.min_trace_start_ts() >= req_start_ts
+            if bufferd_segment.max_trace_start_ts() >= req_start_ts
+                && bufferd_segment.min_trace_start_ts() <= req_start_ts
             {
                 segments.push(bufferd_segment);
             }

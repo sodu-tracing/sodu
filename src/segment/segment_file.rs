@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::proto::service::QueryRequest;
-use crate::proto::types::{SegmentMetadata, WalOffsets};
+use crate::proto::types::{ChunkMetadata, SegmentMetadata, WalOffsets};
 use crate::segment::segment_file_iterator::SegmentFileIterator;
 use crate::utils::utils::create_index_key;
 use anyhow::{anyhow, Context, Result};
@@ -21,8 +21,11 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 
+/// SegmentFile is the persisted segment file, which contains traces.
 pub struct SegmentFile {
+    /// file is the segment file's fd.
     file: File,
+    /// metadata is the segment file metadata.
     metadata: SegmentMetadata,
 }
 
@@ -65,11 +68,23 @@ impl SegmentFile {
         if req.tags.len() != 0 && filtered_trace_ids.len() == 0 {
             return None;
         }
+        let req_start_ts = req.start_ts.unwrap();
+        let req_end_ts = req.end_ts.unwrap();
+        let mut chunks = self.metadata.chunks.to_vec();
+        let chunks: Vec<ChunkMetadata> = chunks
+            .into_iter()
+            .filter(|chunk| {
+                chunk.max_start_ts.unwrap() >= req_start_ts
+                    && chunk.min_start_ts.unwrap() <= req_start_ts
+            })
+            .collect();
         Some(SegmentFileIterator {
             file: self.file,
             filtered_trace_ids: filtered_trace_ids,
-            chunks: self.metadata.chunks.to_vec(),
+            chunks: chunks,
             current_chunk_reader: None,
+            start_ts: req_start_ts,
+            end_ts: req_end_ts,
         })
     }
 
@@ -79,5 +94,12 @@ impl SegmentFile {
         println!("wal id {:?} wal offset {:?}", wal_id, wal_offset);
         let delayed_offsets = self.metadata.delayed_span_wal_offsets.clone();
         (wal_id, wal_offset, delayed_offsets)
+    }
+
+    /// get_ts returns minimum and maximux start ts of segment file.
+    pub fn get_ts(&self) -> (u64, u64) {
+        let max_start_ts = self.metadata.get_max_start_ts();
+        let min_start_ts = self.metadata.get_min_start_ts();
+        (min_start_ts, max_start_ts)
     }
 }

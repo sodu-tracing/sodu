@@ -49,7 +49,7 @@ impl RecoveryManager {
         debug!("replaying wal");
         // now get the wal offset from the last segment file.
         let mut segment_file_ids = self.get_segment_file_ids();
-        segment_file_ids.reverse();
+        segment_file_ids.sort_by(|a, b| b.cmp(&a));
         let mut wal_id = u64::MIN;
         let mut wal_offset = u64::MIN;
         let mut delayed_wal_offsets: HashMap<u64, WalOffsets> = HashMap::default();
@@ -196,7 +196,8 @@ impl RecoveryManager {
             }
         }
 
-        let segment_file_ids = self.get_segment_file_ids();
+        let mut segment_file_ids = self.get_segment_file_ids();
+        segment_file_ids.sort();
         // We have successfully removed all the unnecessary files.
         // Now, remove all the disjoint files.
         let mut disjointed_idx: usize = usize::MAX;

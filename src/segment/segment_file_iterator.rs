@@ -23,6 +23,8 @@ pub struct SegmentFileIterator {
     pub filtered_trace_ids: HashSet<u64>,
     pub chunks: Vec<ChunkMetadata>,
     pub current_chunk_reader: Option<ConsumedBufferReader>,
+    pub start_ts: u64,
+    pub end_ts: u64,
 }
 
 impl SegmentFileIterator {
@@ -30,6 +32,8 @@ impl SegmentFileIterator {
         file: File,
         filtered_trace_ids: HashSet<u64>,
         mut chunks: Vec<ChunkMetadata>,
+        start_ts: u64,
+        end_ts: u64,
     ) -> SegmentFileIterator {
         // First sort the chunks based on the offsets.
         chunks.sort_by(|a, b| a.offset.as_ref().unwrap().cmp(b.offset.as_ref().unwrap()));
@@ -38,6 +42,8 @@ impl SegmentFileIterator {
             filtered_trace_ids: filtered_trace_ids,
             chunks: chunks,
             current_chunk_reader: None,
+            start_ts: start_ts,
+            end_ts: end_ts,
         }
     }
 }
@@ -50,6 +56,8 @@ impl Iterator for SegmentFileIterator {
             if !reader.is_end() {
                 let trace = reader.read_slice().unwrap().unwrap();
                 let decoder = InplaceSpanDecoder(trace);
+                let trace_start_ts = decoder.start_ts();
+                if trace_start_ts < self.end_ts {}
                 // skip if the current trace if the trace id is not part of filtered
                 // traces.
                 let hashed_trace_id = decoder.hashed_trace_id();
@@ -58,7 +66,7 @@ impl Iterator for SegmentFileIterator {
                 {
                     return self.next();
                 }
-                return Some((hashed_trace_id, trace.to_vec()));
+                return Some((trace_start_ts, trace.to_vec()));
             }
         }
         // We read the previous chunk let's move to the next chunk.
@@ -124,8 +132,8 @@ pub mod tests {
         let segment_file = SegmentFile::new(file).unwrap();
         let req = QueryRequest::default();
         let mut segment_itr = segment.iter();
-        for (hashed_trace_id, trace) in segment_file.get_iter_for_query(&req).unwrap() {
-            let (_, in_memory_trace) = segment_itr.next().unwrap();
+        for (start_ts, trace) in segment_file.get_iter_for_query(&req).unwrap() {
+            let (in_memory_start_ts, in_memory_trace) = segment_itr.next().unwrap();
             let mut extended_trace = Vec::new();
             for (idx, span) in in_memory_trace.into_iter().enumerate() {
                 if idx == 0 {
@@ -134,9 +142,7 @@ pub mod tests {
                 }
                 extended_trace.extend(&span[16..]);
             }
-            let decoder = InplaceSpanDecoder(&extended_trace[..]);
-            let segment_trace_id = decoder.hashed_trace_id();
-            assert_eq!(segment_trace_id, hashed_trace_id);
+            assert_eq!(start_ts, in_memory_start_ts);
             assert_eq!(&trace[..], &extended_trace[..]);
         }
     }

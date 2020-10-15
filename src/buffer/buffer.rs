@@ -124,6 +124,10 @@ impl Buffer {
     pub fn clear(&mut self) {
         self.position = 0;
     }
+
+    pub fn bytes(self) -> Vec<u8> {
+        self.inner
+    }
 }
 
 #[cfg(test)]
