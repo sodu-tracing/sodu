@@ -98,7 +98,7 @@ pub mod tests {
     fn test_segment_file_iterator() {
         // create segment file.
         let mut segment = Segment::new();
-        let traces = gen_traces(100, 1000);
+        let traces = gen_traces(100, 1);
         let mut buffer = Buffer::with_size(3 << 20);
         for trace in &traces {
             for span in trace {
@@ -120,13 +120,24 @@ pub mod tests {
         let mut file = File::create(&segment_file_path).unwrap();
         file.write_all(segment_buffer.bytes_ref()).unwrap();
         drop(file);
-        let mut file = File::open(&segment_file_path).unwrap();
-        let mut segment_file = SegmentFile::new(file).unwrap();
+        let file = File::open(&segment_file_path).unwrap();
+        let segment_file = SegmentFile::new(file).unwrap();
         let req = QueryRequest::default();
         let mut segment_itr = segment.iter();
         for (hashed_trace_id, trace) in segment_file.get_iter_for_query(&req).unwrap() {
-            let (segment_hash_id, segment_trace) = segment_itr.next().unwrap();
-            assert_eq!(segment_hash_id, hashed_trace_id);
+            let (_, in_memory_trace) = segment_itr.next().unwrap();
+            let mut extended_trace = Vec::new();
+            for (idx, span) in in_memory_trace.into_iter().enumerate() {
+                if idx == 0 {
+                    extended_trace.extend(span);
+                    continue;
+                }
+                extended_trace.extend(&span[16..]);
+            }
+            let decoder = InplaceSpanDecoder(&extended_trace[..]);
+            let segment_trace_id = decoder.hashed_trace_id();
+            assert_eq!(segment_trace_id, hashed_trace_id);
+            assert_eq!(&trace[..], &extended_trace[..]);
         }
     }
 }

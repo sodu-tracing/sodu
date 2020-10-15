@@ -92,6 +92,6 @@ impl ConsumedBufferReader {
 
     /// is_end tells whether we read the entire buffer or not.
     pub fn is_end(&self) -> bool {
-        self.buf.len() - self.current_offset == 1
+        self.buf.len() - self.current_offset == 0
     }
 }
