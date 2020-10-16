@@ -1,0 +1,14 @@
+[package]
+name = "sodu-single-node"
+version = "0.1.0"
+authors = ["பாலாஜி <rbalajis25@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sodu-core = {path = "../sodu-core"}
+log = "0.4"
+flexi_logger = "0.15"
+parking_lot = "0.11.0"
+anyhow = "1.0"
