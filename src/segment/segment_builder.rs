@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
-use crate::proto::types::{ChunkMetadata, WalOffsets};
-use crate::proto::types::{SegmentMetadata, TraceIDOffset, TraceIds};
+use crate::proto::service::{ChunkMetadata, WalOffsets};
+use crate::proto::service::{SegmentMetadata, TimeRange, TraceIDOffset, TraceIds};
 use crate::utils::utils::calculate_trace_size;
 use protobuf::{Message, RepeatedField};
 use std::collections::hash_map::DefaultHasher;
@@ -100,8 +100,10 @@ impl SegmentBuilder {
     fn finish_chunk(&mut self) {
         // Create chunk metadata.
         let mut chunk_metadata = ChunkMetadata::default();
-        chunk_metadata.set_max_start_ts(self.current_chunk_max_start_ts);
-        chunk_metadata.set_min_start_ts(self.current_chunk_min_start_ts);
+        let mut range = TimeRange::default();
+        range.set_max_start_ts(self.current_chunk_max_start_ts);
+        range.set_min_start_ts(self.current_chunk_min_start_ts);
+        chunk_metadata.set_time_range(range);
         chunk_metadata.set_offset(self.current_chunk_offset as u32);
         chunk_metadata.set_length((self.buffer.size() - self.current_chunk_offset) as u32);
         self.chunks.push(chunk_metadata);
@@ -135,8 +137,14 @@ impl SegmentBuilder {
         }
         // update the metadata
         segment_metadata.set_index(segment_index);
-        segment_metadata.set_min_start_ts(self.chunks[0].get_min_start_ts());
-        segment_metadata.set_max_start_ts(self.chunks[self.chunks.len() - 1].get_max_start_ts());
+        let mut range = TimeRange::default();
+        range.set_max_start_ts(
+            self.chunks[self.chunks.len() - 1]
+                .get_time_range()
+                .get_max_start_ts(),
+        );
+        range.set_min_start_ts(self.chunks[0].get_time_range().get_min_start_ts());
+        segment_metadata.set_time_range(range);
         segment_metadata.set_max_wal_id(max_wal_id);
         segment_metadata.set_max_wal_offset(max_wal_offset);
         let mut delayed_span_wal_offsets = HashMap::default();

@@ -13,7 +13,7 @@
 // limitations under the License.
 use crate::buffer::consumed_buffer_reader::ConsumedBufferReader;
 use crate::encoder::decoder::InplaceSpanDecoder;
-use crate::proto::types::ChunkMetadata;
+use crate::proto::service::{ChunkMetadata, TimeRange};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
@@ -23,29 +23,8 @@ pub struct SegmentFileIterator {
     pub filtered_trace_ids: HashSet<u64>,
     pub chunks: Vec<ChunkMetadata>,
     pub current_chunk_reader: Option<ConsumedBufferReader>,
-    pub start_ts: u64,
-    pub end_ts: u64,
-}
-
-impl SegmentFileIterator {
-    pub fn new(
-        file: File,
-        filtered_trace_ids: HashSet<u64>,
-        mut chunks: Vec<ChunkMetadata>,
-        start_ts: u64,
-        end_ts: u64,
-    ) -> SegmentFileIterator {
-        // First sort the chunks based on the offsets.
-        chunks.sort_by(|a, b| a.offset.as_ref().unwrap().cmp(b.offset.as_ref().unwrap()));
-        SegmentFileIterator {
-            file: file,
-            filtered_trace_ids: filtered_trace_ids,
-            chunks: chunks,
-            current_chunk_reader: None,
-            start_ts: start_ts,
-            end_ts: end_ts,
-        }
-    }
+    pub max_start_ts: u64,
+    pub min_start_ts: u64,
 }
 
 impl Iterator for SegmentFileIterator {
@@ -57,7 +36,10 @@ impl Iterator for SegmentFileIterator {
                 let trace = reader.read_slice().unwrap().unwrap();
                 let decoder = InplaceSpanDecoder(trace);
                 let trace_start_ts = decoder.start_ts();
-                if trace_start_ts < self.end_ts {}
+                // skip this trace if the trace is not falling in iterator range.
+                if trace_start_ts > self.max_start_ts || trace_start_ts < self.min_start_ts {
+                    return self.next();
+                }
                 // skip if the current trace if the trace id is not part of filtered
                 // traces.
                 let hashed_trace_id = decoder.hashed_trace_id();

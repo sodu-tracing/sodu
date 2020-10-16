@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::types::WalOffsets;
+use crate::proto::service::WalOffsets;
 use crate::utils::utils::{get_file_ids, read_files_in_dir};
 use anyhow::Context;
 

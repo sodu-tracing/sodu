@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::proto::common::{AnyValue_oneof_value, KeyValue};
+use crate::proto::service::TimeRange;
 use crate::proto::trace::Span;
 use anyhow::{Context, Result};
 use flexi_logger::Logger;
@@ -104,14 +105,15 @@ fn extract_indices_from_attributes(
     }
 }
 
-pub struct TimeRange {
-    start_ts: u64,
-    end_ts: u64,
-}
-
 /// is_over_lapping tells that whether the requesting time range is in block time range or not.
-pub fn is_over_lapping(req: TimeRange, block: TimeRange) -> bool {
-    false
+pub fn is_over_lapping_range(req: &TimeRange, block: &TimeRange) -> bool {
+    // get all the required data.
+    let req_min_start_ts = req.min_start_ts.unwrap();
+    let req_max_start_ts = req.max_start_ts.unwrap();
+    let block_min_start_ts = block.min_start_ts.unwrap();
+    let block_max_start_ts = block.max_start_ts.unwrap();
+    (req_min_start_ts <= block_min_start_ts && block_min_start_ts <= req_max_start_ts)
+        || (req_min_start_ts <= block_max_start_ts && block_max_start_ts <= req_max_start_ts)
 }
 
 /// this mod contains test helper functions for the whole project level.

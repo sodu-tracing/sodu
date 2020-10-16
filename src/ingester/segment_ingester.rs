@@ -13,10 +13,10 @@
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
 use crate::encoder::decoder::InplaceSpanDecoder;
-use crate::proto::service::QueryRequest;
+use crate::proto::service::{QueryRequest, TimeRange};
 use crate::segment::segment::Segment;
 use crate::segment::segment_builder::SegmentBuilder;
-use crate::utils::utils::{get_file_ids, read_files_in_dir};
+use crate::utils::utils::{get_file_ids, is_over_lapping_range, read_files_in_dir};
 use crate::wal::wal::EncodedRequest;
 use futures::io::IoSlice;
 use iou::IoUring;
@@ -233,19 +233,15 @@ impl SegmentIngester {
     /// get_segments_for_query
     pub fn get_segments_for_query(&self, req: &QueryRequest) -> Vec<&Segment> {
         let mut segments = Vec::new();
-        let req_start_ts = req.start_ts.unwrap();
+
         // Check whether the current segment falls in the time range.
-        if self.current_segment.max_trace_start_ts() >= req_start_ts
-            && self.current_segment.min_trace_start_ts() <= req_start_ts
-        {
+        if is_over_lapping_range(req.get_time_range(), &self.current_segment.get_time_range()) {
             segments.push(&self.current_segment);
         }
 
         // Now, iterate over buffered segments.
         for bufferd_segment in &self.buffered_segment {
-            if bufferd_segment.max_trace_start_ts() >= req_start_ts
-                && bufferd_segment.min_trace_start_ts() <= req_start_ts
-            {
+            if is_over_lapping_range(req.get_time_range(), &bufferd_segment.get_time_range()) {
                 segments.push(bufferd_segment);
             }
         }

@@ -13,6 +13,7 @@
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
 use crate::proto::service::QueryRequest;
+use crate::proto::service::TimeRange;
 use crate::segment::segment_iterator::SegmentIterator;
 use crate::utils::utils::create_index_key;
 use crate::wal::wal::EncodedRequest;
@@ -175,8 +176,8 @@ impl Segment {
 
     /// get_iter_for_query returns segment iterator for the given query request.
     pub fn get_iter_for_query(&self, req: &QueryRequest) -> Option<SegmentIterator> {
-        let start_ts = *req.start_ts.as_ref().unwrap();
-        let end_ts = *req.end_ts.as_ref().unwrap();
+        let start_ts = req.get_time_range().get_min_start_ts();
+        let end_ts = req.get_time_range().get_max_start_ts();
         let mut filtered_trace_id: HashSet<u64> = HashSet::new();
         // Filter trace ids for the given tags.
         for (key, val) in &req.tags {
@@ -209,6 +210,14 @@ impl Segment {
         // sort the start_ts in descending order.
         trace_offsets.sort_by(|a, b| b.0.cmp(&a.0));
         Some(SegmentIterator::new(trace_offsets, &self.buffer))
+    }
+
+    /// get_time_range returns the time range of the given segment.
+    pub fn get_time_range(&self) -> TimeRange {
+        let mut range = TimeRange::default();
+        range.set_min_start_ts(self.min_start_ts);
+        range.set_max_start_ts(self.max_start_ts);
+        range
     }
 }
 

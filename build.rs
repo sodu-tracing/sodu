@@ -13,7 +13,6 @@ fn main() {
             "opentelemetry-proto/opentelemetry/proto/collector/trace/v1/trace_service.proto",
             "opentelemetry-proto/opentelemetry/proto/metrics/v1/metrics.proto",
             "opentelemetry-proto/opentelemetry/proto/collector/metrics/v1/metrics_service.proto",
-            "proto/types.proto",
             "proto/service.proto",
         ],
         &["opentelemetry-proto/", "proto/"],

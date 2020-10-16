@@ -1,20 +1,48 @@
+message ChunkMetadata {
+  required TimeRange time_range = 1;
+  required uint32 offset = 2;
+  required uint32 length = 3;
+  repeated uint32 trace_offsets = 4;
+}
+
+message TraceIDOffset {
+  required uint32 offset = 1;
+  required uint64 hashed_trace_id = 2;
+}
+
+message TraceIds { repeated uint64 trace_ids = 1; }
+
+message WalOffsets { repeated uint64 offsets = 1; }
+
+message SegmentMetadata {
+  required TimeRange time_range = 1;
+  repeated ChunkMetadata chunks = 2;
+  map<string, TraceIds> index = 3;
+  repeated TraceIDOffset sorted_trace_ids = 4;
+  map<uint64, WalOffsets> delayed_span_wal_offsets = 5;
+  required uint64 max_wal_id = 6;
+  required uint64 max_wal_offset = 7;
+}
+
 message QueryRequest {
-    optional string service_name = 1;
-    optional string operation_name = 2;
-    map<string, string> tags = 3;
-    required uint64 start_ts = 4;
-    required uint64 end_ts = 5;
+  optional string service_name = 1;
+  optional string operation_name = 2;
+  map<string, string> tags = 3;
+  required TimeRange time_range = 4;
+}
+
+message TimeRange {
+  required uint64 min_start_ts = 1;
+  required uint64 max_start_ts = 2;
 }
 
 message InternalTrace {
-    required uint64 start_ts = 1;
-    required bytes trace = 2;
+  required uint64 start_ts = 1;
+  required bytes trace = 2;
 }
 
-message QueryResponse {
-    repeated  InternalTrace traces = 1;
-}
+message QueryResponse { repeated InternalTrace traces = 1; }
 
 service SoduStorage {
-    rpc QueryTrace (QueryRequest) returns (QueryResponse) {}
+  rpc QueryTrace(QueryRequest) returns (QueryResponse) {}
 }

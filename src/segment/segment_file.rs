@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::proto::service::QueryRequest;
-use crate::proto::types::{ChunkMetadata, SegmentMetadata, WalOffsets};
+use crate::proto::service::{ChunkMetadata, SegmentMetadata, TimeRange, WalOffsets};
 use crate::segment::segment_file_iterator::SegmentFileIterator;
-use crate::utils::utils::create_index_key;
+use crate::utils::utils::{create_index_key, is_over_lapping_range};
 use anyhow::{anyhow, Context, Result};
 use protobuf::parse_from_bytes;
 use std::collections::{HashMap, HashSet};
@@ -68,23 +68,20 @@ impl SegmentFile {
         if req.tags.len() != 0 && filtered_trace_ids.len() == 0 {
             return None;
         }
-        let req_start_ts = req.start_ts.unwrap();
-        let req_end_ts = req.end_ts.unwrap();
-        let mut chunks = self.metadata.chunks.to_vec();
+        // Filter all the chunks that falls in the specified time range.
+        let chunks = self.metadata.chunks.to_vec();
         let chunks: Vec<ChunkMetadata> = chunks
             .into_iter()
-            .filter(|chunk| {
-                chunk.max_start_ts.unwrap() >= req_start_ts
-                    && chunk.min_start_ts.unwrap() <= req_start_ts
-            })
+            .filter(|chunk| is_over_lapping_range(req.get_time_range(), chunk.get_time_range()))
             .collect();
+        // return the iterator.
         Some(SegmentFileIterator {
             file: self.file,
             filtered_trace_ids: filtered_trace_ids,
             chunks: chunks,
             current_chunk_reader: None,
-            start_ts: req_start_ts,
-            end_ts: req_end_ts,
+            max_start_ts: req.get_time_range().get_max_start_ts(),
+            min_start_ts: req.get_time_range().get_min_start_ts(),
         })
     }
 
@@ -96,10 +93,8 @@ impl SegmentFile {
         (wal_id, wal_offset, delayed_offsets)
     }
 
-    /// get_ts returns minimum and maximux start ts of segment file.
-    pub fn get_ts(&self) -> (u64, u64) {
-        let max_start_ts = self.metadata.get_max_start_ts();
-        let min_start_ts = self.metadata.get_min_start_ts();
-        (min_start_ts, max_start_ts)
+    /// get_time_range returns time range of the segment file.
+    pub fn get_time_range(&self) -> &TimeRange {
+        self.metadata.get_time_range()
     }
 }

@@ -16,7 +16,9 @@ use crate::buffer::buffer::Buffer;
 use crate::ingester::segment_ingester::SegmentIngester;
 use crate::proto::service::{InternalTrace, QueryRequest, QueryResponse};
 use crate::segment::segment_file::SegmentFile;
-use crate::utils::utils::{calculate_trace_size, get_file_ids, read_files_in_dir};
+use crate::utils::utils::{
+    calculate_trace_size, get_file_ids, is_over_lapping_range, read_files_in_dir,
+};
 use anyhow::Context;
 use parking_lot::Mutex;
 use protobuf::RepeatedField;
@@ -73,7 +75,6 @@ impl QueryExecutor {
 
         // TODO: bug we may get partial segment file id. So, we need checkpoint to detect the
         // right starting point for the current snapshot.
-        let req_start_ts = req.start_ts.unwrap();
         for segment_file_id in segment_file_ids {
             let file = File::open(
                 &self
@@ -88,8 +89,7 @@ impl QueryExecutor {
                 ))
                 .unwrap();
             // filter the segment file based on the requested time range.
-            let (min_start_ts, max_start_ts) = segment_file.get_ts();
-            if req_start_ts < min_start_ts || req_start_ts > max_start_ts {
+            if !is_over_lapping_range(req.get_time_range(), segment_file.get_time_range()) {
                 continue;
             }
 

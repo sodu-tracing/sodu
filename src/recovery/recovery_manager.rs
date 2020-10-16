@@ -14,7 +14,7 @@
 use crate::encoder::decoder::decode_span;
 use crate::ingester::segment_ingester::SegmentIngester;
 use crate::options::options::Options;
-use crate::proto::types::WalOffsets;
+use crate::proto::service::WalOffsets;
 use crate::segment::segment_file::SegmentFile;
 use crate::utils::utils::{extract_indices_from_span, get_file_ids, read_files_in_dir};
 use crate::wal::wal::EncodedRequest;
