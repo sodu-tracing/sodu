@@ -1,5 +1,5 @@
 [package]
-name = "sodu-single-node"
+name = "sodu-storage"
 version = "0.1.0"
 authors = ["பாலாஜி <rbalajis25@gmail.com>"]
 edition = "2018"
@@ -14,3 +14,5 @@ parking_lot = "0.11.0"
 anyhow = "1.0"
 tide = "0.13.0"
 async-std = { version = "1.6.0", features = ["attributes"] }
+grpcio = "0.6"
+futures = "0.3.5"

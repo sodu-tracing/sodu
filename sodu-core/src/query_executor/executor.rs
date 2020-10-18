@@ -37,6 +37,12 @@ pub struct QueryExecutor {
 }
 
 impl QueryExecutor {
+    pub fn new(segment_path: PathBuf, ingester: Arc<Mutex<SegmentIngester>>) -> QueryExecutor {
+        QueryExecutor {
+            ingester,
+            segment_path,
+        }
+    }
     /// query is used to query the sodu instance and return back the filtered traces for the given
     /// time span.
     pub fn query(&self, req: QueryRequest) -> QueryResponse {

@@ -139,7 +139,9 @@ impl RecoveryManager {
         }
         let wal_itr = wal_itr.unwrap();
         let mut ingester = SegmentIngester::new(self.opt.shard_path.clone());
+        let mut ingested = false;
         for (encoded_buf, wal_id, offset) in wal_itr {
+            ingested = true;
             // TODO: may be we do want to skip the first iteration because,
             // that is request is already persisted.
             let span = decode_span(&encoded_buf);
@@ -151,6 +153,10 @@ impl RecoveryManager {
                 encoded_span: &encoded_buf[..],
             };
             ingester.push_span(wal_id, req);
+        }
+        // Nothing ingested to flush. Just return here.
+        if !ingested {
+            return;
         }
         // flush all segments to the disk.
         ingester.flush_segment_if_necessary(true);

@@ -5,13 +5,15 @@ use sodu_core::ingester::coordinator::IngesterCoordinator;
 use sodu_core::ingester::ingester_runner::IngesterRunner;
 use sodu_core::ingester::segment_ingester::SegmentIngester;
 use sodu_core::options::options::Options;
+use sodu_core::query_executor::executor::QueryExecutor;
 use sodu_core::recovery::recovery_manager::RecoveryManager;
 use sodu_core::server::grpc::start_server;
 use sodu_core::utils::utils::init_all_utils;
 use sodu_core::wal::wal::Wal;
 use std::sync::Arc;
-mod http_server;
-
+use std::thread;
+mod storage;
+use storage::server::start_storage_server;
 fn main() {
     let opt = Options::init();
     init_all_utils();
@@ -29,5 +31,10 @@ fn main() {
     let runner = IngesterRunner::new(protected_ingester.clone(), wal);
     runner.run(receiver);
     // Start the grpc server.
-    start_server(coordinator);
+    thread::spawn(move || {
+        start_server(coordinator);
+    });
+    // Start storage server.
+    let executor = QueryExecutor::new(opt.shard_path, protected_ingester);
+    start_storage_server(executor);
 }

@@ -2,5 +2,6 @@
 
 members = [
     "sodu-core",
-    "sodu-single-node"
+    "sodu-single-node",
+    "sodu-storage"
 ]

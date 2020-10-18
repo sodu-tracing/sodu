@@ -20,6 +20,7 @@ extern crate test;
 pub mod buffer;
 pub mod encoder;
 pub mod ingester;
+pub mod json_encoder;
 pub mod options;
 pub mod proto;
 pub mod query_executor;
