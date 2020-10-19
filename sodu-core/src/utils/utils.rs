@@ -17,9 +17,11 @@ use crate::proto::trace::Span;
 use anyhow::{Context, Result};
 use flexi_logger::Logger;
 use protobuf::RepeatedField;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs::read_dir;
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 pub fn init_all_utils() {
@@ -110,6 +112,9 @@ pub fn is_over_lapping_range(req: &TimeRange, block: &TimeRange) -> bool {
     // get all the required data.
     let req_min_start_ts = req.min_start_ts.unwrap();
     let req_max_start_ts = req.max_start_ts.unwrap();
+    if req_max_start_ts == 0 && req_min_start_ts == 0 {
+        return true;
+    }
     let block_min_start_ts = block.min_start_ts.unwrap();
     let block_max_start_ts = block.max_start_ts.unwrap();
     (req_min_start_ts <= block_min_start_ts && block_min_start_ts <= req_max_start_ts)
@@ -156,4 +161,11 @@ pub fn calculate_trace_size(trace: &Vec<&[u8]>) -> usize {
         size += span.len() - 16;
     }
     size
+}
+
+/// hash_bytes return the hashed output of the given input.
+pub fn hash_bytes(input: &[u8]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    input.hash(&mut hasher);
+    hasher.finish()
 }
