@@ -18,11 +18,25 @@ use crate::encoder::span::{
     ATTRIBUTE_TYPE, BOOL_VAL_TYPE, DOUBLE_VAL_TYPE, EVENT_TYPE, INT_VAL_TYPE, LINK_TYPE,
     PARENT_SPAN_ID_EXIST, STRING_VAL_TYPE,
 };
+use crate::proto::service::InternalTrace;
 use crate::utils::utils::hash_bytes;
 use std::convert::TryInto;
 use std::fmt::Display;
 use std::{i64, u64};
 
+/// encode_traces convert the interanal traces to json format.
+pub fn encode_traces(buf: &mut Buffer, traces: Vec<InternalTrace>) {
+    buf.write_byte(b'{');
+    buf.write_raw_slice(r#""traces":["#.as_bytes());
+    for idx in 0..traces.len() {
+        encode_trace(buf, &traces[idx].get_trace()[..]);
+        if idx + 1 < traces.len() {
+            buf.write_byte(b',');
+        }
+    }
+    buf.write_byte(b']');
+    buf.write_byte(b'}');
+}
 /// encode_trace encodes the trace into json structure.
 pub fn encode_trace(buf: &mut Buffer, trace: &[u8]) {
     buf.write_byte(b'{');

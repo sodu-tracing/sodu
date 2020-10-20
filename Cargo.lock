@@ -1762,6 +1762,7 @@ dependencies = [
  "protobuf-codegen",
  "protoc-grpcio",
  "rand",
+ "serde",
  "skiplist",
  "structopt",
  "tempfile",
@@ -1777,6 +1778,7 @@ dependencies = [
  "flexi_logger",
  "log",
  "parking_lot 0.11.0",
+ "serde",
  "sodu-core",
  "tide",
 ]

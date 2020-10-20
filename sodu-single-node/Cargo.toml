@@ -14,3 +14,4 @@ parking_lot = "0.11.0"
 anyhow = "1.0"
 tide = "0.13.0"
 async-std = { version = "1.6.0", features = ["attributes"] }
+serde = "1.0.117"
