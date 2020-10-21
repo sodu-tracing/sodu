@@ -17,18 +17,19 @@ use crate::meta_store::sodu_meta_store::SoduMetaStore;
 use crate::proto::service::{QueryRequest, TimeRange};
 use crate::segment::segment::Segment;
 use crate::segment::segment_builder::SegmentBuilder;
+use crate::utils::types::WalCheckPoint;
 use crate::utils::utils::{get_file_ids, is_over_lapping_range, read_files_in_dir};
 use crate::wal::wal::EncodedRequest;
 use futures::io::IoSlice;
 use iou::IoUring;
 use log::debug;
-use std::arc::Arc;
 use std::collections::{HashSet, VecDeque};
 use std::fs;
 use std::fs::File;
 use std::mem;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::{Duration, UNIX_EPOCH};
 
 /// SegmentIngester is used for ingesting incoming spans. It is responsible for handling the
@@ -197,6 +198,7 @@ impl SegmentIngester {
         // Let's wait for all the submitted events. Actually we can do in one call,
         // but still iou doesn't support io_uring_peek_batch_cqe.
         let mut completed_segment_id = HashSet::with_capacity(self.submitted_iou_ids.len());
+        let mut max_segment_id = u64::MIN;
         for _ in 0..self.submitted_iou_ids.len() {
             let mut cq = self.iou.cq();
             let cqe = cq.wait_for_cqe().expect("unable to wait for ceq event");
@@ -204,12 +206,23 @@ impl SegmentIngester {
             // assert_eq!(cqe.is_timeout(), false);
             assert_eq!(self.submitted_iou_ids.contains(&cqe.user_data()), true);
             completed_segment_id.insert(cqe.user_data());
+            // update the max segment file id. This is used to calculate the
+            // wal check point.
+            if cqe.user_data() > max_segment_id {
+                max_segment_id = cqe.user_data();
+            }
         }
         assert_eq!(completed_segment_id.len(), self.submitted_iou_ids.len());
         self.submitted_iou_ids.clear();
         loop {
             if let Some(mut builder) = self.submitted_builders.pop() {
-                builder.clear();
+                let current_check_point = builder.get_wal_check_point();
+                // Save the wal check point if the
+                if current_check_point.segment_id == max_segment_id {
+                    self.meta_store.save_wal_check_point(current_check_point);
+                }
+                // update the wal check point.
+                // TODO: This can be simplyfied by taking the last builder
                 self.builder_freelist.push(builder);
                 continue;
             }
@@ -220,10 +233,11 @@ impl SegmentIngester {
     /// get_segment_builder returns segment builder if it's in the freelist. Otherwise, it creates
     /// new SegmentBuilder.
     fn get_segment_builder(&mut self) -> SegmentBuilder {
-        if let Some(builder) = self.builder_freelist.pop() {
+        if let Some(mut builder) = self.builder_freelist.pop() {
+            builder.clear(self.next_segment_id);
             return builder;
         }
-        SegmentBuilder::new()
+        SegmentBuilder::new(self.next_segment_id)
     }
 
     /// get_next_segment file return's next segment file.

@@ -14,6 +14,7 @@
 use crate::buffer::buffer::Buffer;
 use crate::proto::service::{ChunkMetadata, WalOffsets};
 use crate::proto::service::{SegmentMetadata, TimeRange, TraceIDOffset, TraceIds};
+use crate::utils::types::WalCheckPoint;
 use crate::utils::utils::calculate_trace_size;
 use protobuf::{Message, RepeatedField};
 use std::collections::hash_map::DefaultHasher;
@@ -39,10 +40,16 @@ pub struct SegmentBuilder {
     current_chunk_max_start_ts: u64,
     /// trace_size_buffer is a temporary buffer used for encoding trace buffer.
     trace_size_buffer: [u8; 5],
+    /// max_wal_id is the last wal id that this segment have seen.
+    max_wal_id: u64,
+    /// max_wal_offset is the last wal offset that this segment have seen.
+    max_wal_offset: u64,
+    /// segment id of the builder.
+    segment_id: u64,
 }
 
 impl SegmentBuilder {
-    pub fn new() -> SegmentBuilder {
+    pub fn new(segment_id: u64) -> SegmentBuilder {
         SegmentBuilder {
             buffer: Buffer::with_size(64 << 20),
             trace_offsets: Vec::new(),
@@ -51,6 +58,9 @@ impl SegmentBuilder {
             current_chunk_max_start_ts: u64::MIN,
             current_chunk_min_start_ts: u64::MAX,
             trace_size_buffer: [0; 5],
+            max_wal_id: 0,
+            max_wal_offset: 0,
+            segment_id: segment_id,
         }
     }
 
@@ -120,6 +130,8 @@ impl SegmentBuilder {
         max_wal_offset: u64,
         delayed_wal_offsets: &HashMap<u64, Vec<u64>>,
     ) -> &Buffer {
+        self.max_wal_id = max_wal_id;
+        self.max_wal_offset = max_wal_offset;
         // finish the current chunk.
         if self.current_chunk_offset != self.buffer.size() {
             self.finish_chunk();
@@ -178,12 +190,22 @@ impl SegmentBuilder {
         &self.buffer
     }
 
-    pub fn clear(&mut self) {
+    /// get_wal_check_point returns wal checkpoint of this segment file.
+    pub fn get_wal_check_point(&self) -> WalCheckPoint {
+        WalCheckPoint {
+            wal_id: self.max_wal_id,
+            wal_offset: self.max_wal_offset,
+            segment_id: self.segment_id,
+        }
+    }
+
+    pub fn clear(&mut self, segment_id: u64) {
         self.buffer.clear();
         self.trace_offsets.clear();
         self.chunks.clear();
         self.current_chunk_offset = 0;
         self.current_chunk_max_start_ts = u64::MIN;
         self.current_chunk_min_start_ts = u64::MAX;
+        self.segment_id = segment_id;
     }
 }

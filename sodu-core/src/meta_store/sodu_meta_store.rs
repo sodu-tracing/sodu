@@ -37,8 +37,10 @@ pub struct SoduMetaStore {
 impl SoduMetaStore {
     /// new returns SoduMetaStore.
     pub fn new(opt: &Options) -> SoduMetaStore {
+        let mut opts = DBOptions::new();
+        opts.create_if_missing(true);
         let db = DB::open(
-            DBOptions::default(),
+            opts,
             &opt.meta_store_path
                 .clone()
                 .into_os_string()
@@ -54,24 +56,25 @@ impl SoduMetaStore {
     }
 
     /// save_wal_check_point saves wal checkpoint.
-    pub fn save_wal_check_point(&mut self, wal_id: u64, wal_offset: u64) {
+    pub fn save_wal_check_point(&self, check_point: WalCheckPoint) {
         // encode wal id and wal offset.
-        let mut buffer = Buffer::with_size(16);
-        buffer.write_raw_slice(&wal_id.to_be_bytes());
-        buffer.write_raw_slice(&wal_offset.to_be_bytes());
+        let mut buffer = Buffer::with_size(24);
+        buffer.write_raw_slice(&check_point.wal_id.to_be_bytes());
+        buffer.write_raw_slice(&check_point.wal_offset.to_be_bytes());
+        buffer.write_raw_slice(&check_point.segment_id.to_be_bytes());
         self.db
             .put(WAL_CHECK_POINT, buffer.bytes_ref())
             .map_err(|e| {
                 format!(
                     "error while saving checkpoint for wal id {:?} and wal offset {:?}. err_msg: {:?}",
-                    wal_id, wal_offset,e
+                    check_point.wal_id, check_point.wal_offset,e
                 )
             })
             .unwrap();
     }
 
     /// get_wal_check_point retrives wal check point.
-    pub fn get_wal_check_point(&mut self) -> Option<WalCheckPoint> {
+    pub fn get_wal_check_point(&self) -> Option<WalCheckPoint> {
         let check_point = self
             .db
             .get(WAL_CHECK_POINT)
@@ -80,10 +83,15 @@ impl SoduMetaStore {
         // return the checkpoint if we persisted checkpoint.
         if let Some(val) = check_point {
             // always check point should be of length of 16.
-            assert_eq!(val.len(), 16);
+            assert_eq!(val.len(), 24);
             let wal_id = u64::from_be_bytes(val[..8].try_into().unwrap());
-            let wal_offset = u64::from_be_bytes(val[8..].try_into().unwrap());
-            return Some(WalCheckPoint { wal_id, wal_offset });
+            let wal_offset = u64::from_be_bytes(val[8..16].try_into().unwrap());
+            let segment_id = u64::from_be_bytes(val[16..].try_into().unwrap());
+            return Some(WalCheckPoint {
+                wal_id,
+                wal_offset,
+                segment_id,
+            });
         }
         None
     }

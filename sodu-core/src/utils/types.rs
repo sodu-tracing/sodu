@@ -19,9 +19,12 @@ pub const SERVICE_NAME: &str = "service.name";
 pub const SERVICE_INSTANCE_ID: &str = "service.instance.id";
 
 /// WalCheckPoint is the wal persisted check point.
+#[derive(Default, Clone)]
 pub struct WalCheckPoint {
     // last persisted segment's wal id.
     pub wal_id: u64,
     // last persisted segment's wal offset.
     pub wal_offset: u64,
+    // last persisted segment id.
+    pub segment_id: u64,
 }

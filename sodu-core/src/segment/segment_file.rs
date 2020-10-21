@@ -93,6 +93,11 @@ impl SegmentFile {
         (wal_id, wal_offset, delayed_offsets)
     }
 
+    /// get_delayed_offsets returns delayed offsets.
+    pub fn get_delayed_offsets(&self) -> HashMap<u64, WalOffsets> {
+        self.metadata.delayed_span_wal_offsets.clone()
+    }
+
     /// get_time_range returns time range of the segment file.
     pub fn get_time_range(&self) -> &TimeRange {
         self.metadata.get_time_range()

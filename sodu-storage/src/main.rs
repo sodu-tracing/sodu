@@ -13,22 +13,24 @@ use sodu_core::wal::wal::Wal;
 use std::sync::Arc;
 use std::thread;
 mod storage;
+use sodu_core::meta_store::sodu_meta_store::SoduMetaStore;
 use storage::server::start_storage_server;
 fn main() {
     let opt = Options::init();
     init_all_utils();
     debug!("running in debug mode");
-    let recovery_mngr = RecoveryManager::new(opt.clone());
+    let meta_store = Arc::new(SoduMetaStore::new(&opt));
+    let recovery_mngr = RecoveryManager::new(opt.clone(), meta_store.clone());
     recovery_mngr.repair();
     // Create the ingester instance.
-    let ingester = SegmentIngester::new(opt.shard_path.clone());
+    let ingester = SegmentIngester::new(opt.shard_path.clone(), meta_store.clone());
     let protected_ingester = Arc::new(Mutex::new(ingester));
     // run the the ingester.
     let (coordinator, receiver) = IngesterCoordinator::new();
     let wal = Wal::new(opt.clone())
         .context(format!("error while building wal"))
         .unwrap();
-    let runner = IngesterRunner::new(protected_ingester.clone(), wal);
+    let runner = IngesterRunner::new(protected_ingester.clone(), wal, meta_store.clone());
     runner.run(receiver);
     // Start the grpc server.
     thread::spawn(move || {

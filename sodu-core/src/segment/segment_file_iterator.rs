@@ -97,7 +97,7 @@ pub mod tests {
             }
         }
         // let's build the segment file.
-        let mut builder = SegmentBuilder::new();
+        let mut builder = SegmentBuilder::new(0);
         for (start_ts, trace) in segment.iter() {
             builder.add_trace(start_ts, trace);
         }
