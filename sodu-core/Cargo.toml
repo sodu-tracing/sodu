@@ -23,6 +23,8 @@ crossbeam = "0.7.3"
 parking_lot = "0.11.0"
 anyhow = "1.0"
 serde = "1.0.117"
+[dependencies.rocksdb]
+git = "https://github.com/tikv/rust-rocksdb.git"
 
 [build-dependencies]
 protobuf-codegen = "2.16"

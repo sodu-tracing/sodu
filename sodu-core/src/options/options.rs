@@ -26,6 +26,9 @@ pub struct Options {
     /// wal_path contains all the wal related files.
     #[structopt(skip)]
     pub wal_path: PathBuf,
+    #[structopt(skip)]
+    /// meta_store_path is the meta store path.
+    pub meta_store_path: PathBuf,
 }
 
 impl Options {
@@ -36,7 +39,10 @@ impl Options {
         fs::create_dir_all(&opt.shard_path).expect("unable to create shard path");
         // Create the wal path.
         opt.wal_path = opt.dir.join("wal");
-        fs::create_dir_all(&opt.wal_path).expect("unable to create shard path");
+        fs::create_dir_all(&opt.wal_path).expect("unable to create wal path");
+        // create the meta store path.
+        opt.meta_store_path = opt.dir.join("metastore");
+        fs::create_dir_all(&opt.meta_store_path).expect("unable to create meta store path");
         opt
     }
 }

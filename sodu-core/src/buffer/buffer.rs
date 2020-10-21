@@ -125,7 +125,10 @@ impl Buffer {
         self.position = 0;
     }
 
-    pub fn bytes(self) -> Vec<u8> {
+    pub fn bytes(mut self) -> Vec<u8> {
+        unsafe {
+            self.inner.set_len(self.position);
+        }
         self.inner
     }
 }

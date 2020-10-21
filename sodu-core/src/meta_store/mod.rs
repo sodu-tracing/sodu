@@ -11,17 +11,4 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// Convention are referred from
-// https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/resource/semantic_conventions/README.md#service
-// Resource service name.
-pub const SERVICE_NAME: &str = "service.name";
-// Resource instance id.
-pub const SERVICE_INSTANCE_ID: &str = "service.instance.id";
-
-/// WalCheckPoint is the wal persisted check point.
-pub struct WalCheckPoint {
-    // last persisted segment's wal id.
-    pub wal_id: u64,
-    // last persisted segment's wal offset.
-    pub wal_offset: u64,
-}
+pub mod sodu_meta_store;

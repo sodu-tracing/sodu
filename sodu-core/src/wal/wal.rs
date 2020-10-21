@@ -230,6 +230,7 @@ pub mod tests {
             dir: tmp_dir.path().to_path_buf(),
             shard_path: tmp_dir.path().to_path_buf().join("shard"),
             wal_path: tmp_dir.path().to_path_buf().join("wal"),
+            meta_store_path: tmp_dir.path().to_path_buf().join("meta_store"),
         }
     }
 

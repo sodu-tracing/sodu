@@ -13,6 +13,7 @@
 // limitations under the License.
 use crate::buffer::buffer::Buffer;
 use crate::encoder::decoder::InplaceSpanDecoder;
+use crate::meta_store::sodu_meta_store::SoduMetaStore;
 use crate::proto::service::{QueryRequest, TimeRange};
 use crate::segment::segment::Segment;
 use crate::segment::segment_builder::SegmentBuilder;
@@ -21,6 +22,7 @@ use crate::wal::wal::EncodedRequest;
 use futures::io::IoSlice;
 use iou::IoUring;
 use log::debug;
+use std::arc::Arc;
 use std::collections::{HashSet, VecDeque};
 use std::fs;
 use std::fs::File;
@@ -28,6 +30,7 @@ use std::mem;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::time::{Duration, UNIX_EPOCH};
+
 /// SegmentIngester is used for ingesting incoming spans. It is responsible for handling the
 /// life cycle of ingestion.
 pub struct SegmentIngester {
@@ -55,11 +58,13 @@ pub struct SegmentIngester {
     /// builder_freelist contains iouring completed table builder. It can be reused for further
     /// building segment.
     builder_freelist: Vec<SegmentBuilder>,
+    /// meta_store is used to store wal check point.
+    meta_store: Arc<SoduMetaStore>,
 }
 
 impl SegmentIngester {
     /// new returns SegmentIngester instance.
-    pub fn new(segments_path: PathBuf) -> SegmentIngester {
+    pub fn new(segments_path: PathBuf, meta_store: Arc<SoduMetaStore>) -> SegmentIngester {
         fs::create_dir_all(&segments_path).unwrap();
         // Get all the start id of the current segment.
         let segment_file_path = read_files_in_dir(&segments_path, "segment").unwrap();
@@ -81,6 +86,7 @@ impl SegmentIngester {
             submitted_iou_ids: HashSet::new(),
             builder_freelist: Vec::new(),
             buffered_segment: VecDeque::new(),
+            meta_store,
         }
     }
 

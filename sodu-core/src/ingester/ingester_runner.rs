@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::ingester::segment_ingester::SegmentIngester;
+use crate::meta_store::sodu_meta_store::SoduMetaStore;
 use crate::proto::trace::Span;
 use crate::wal::wal::Wal;
 use crossbeam::crossbeam_channel::Receiver;
@@ -33,15 +34,23 @@ pub struct IngesterRunner {
     /// needs to be changed to lock free and per core per thread architecture. For simplicity
     /// sake. Just bear with this for now.
     segment_ingester: Arc<Mutex<SegmentIngester>>,
+    /// wal is use to presist all the incoming request.
     wal: Wal,
+    /// meta_store is used to store all the metadata of segements and wal checkpoint.
+    meta_store: Arc<SoduMetaStore>,
 }
 
 impl IngesterRunner {
     /// new returns IngesterRunner.
-    pub fn new(segment_ingester: Arc<Mutex<SegmentIngester>>, wal: Wal) -> IngesterRunner {
+    pub fn new(
+        segment_ingester: Arc<Mutex<SegmentIngester>>,
+        wal: Wal,
+        meta_store: Arc<SoduMetaStore>,
+    ) -> IngesterRunner {
         IngesterRunner {
             segment_ingester,
-            wal: wal,
+            wal,
+            meta_store,
         }
     }
 

@@ -65,7 +65,7 @@ pub fn start_http_server(executor: QueryExecutor) {
             encode_traces(&mut buffer, res.traces.into_vec());
             let mut res = Response::new(200);
             res.set_content_type(Mime::from("application/json"));
-            res.set_body(String::from_utf8_lossy(buffer.bytes_ref()).to_string());
+            res.set_body(buffer.bytes());
             Ok(res)
         });
     task::block_on(async move { app.listen("127.0.0.1:8080").await.unwrap() });

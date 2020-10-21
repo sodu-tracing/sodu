@@ -432,6 +432,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08c48aae112d48ed9f069b33538ea9e3e90aa263cfa3d1c24309612b1f7472de"
 
 [[package]]
+name = "bzip2-sys"
+version = "0.1.9+1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad3b39a260062fca31f7b0b12f207e8f2590a67d32ec7d59c20484b07ea7285e"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+]
+
+[[package]]
 name = "cache-padded"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -442,6 +453,9 @@ name = "cc"
 version = "1.0.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed67cbde08356238e75fc4656be4749481eeffb09e19f320a25237d5221c985d"
+dependencies = [
+ "jobserver",
+]
 
 [[package]]
 name = "cexpr"
@@ -677,6 +691,12 @@ name = "discard"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
+
+[[package]]
+name = "either"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
 name = "event-listener"
@@ -1061,10 +1081,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc6f3ad7b9d11a0c00842ff8de1b60ee58661048eb8049ed33c73594f359d7e6"
+
+[[package]]
+name = "jobserver"
+version = "0.1.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c71313ebb9439f74b00d9d2dcec36440beaf57a6aa0623068441dd7cd81a7f2"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "js-sys"
@@ -1107,6 +1145,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "librocksdb_cloud_sys"
+version = "0.1.0"
+source = "git+https://github.com/tikv/rust-rocksdb.git#0ca70eadb9e0aaa654c23b1930cbfeaa3d0bad0e"
+dependencies = [
+ "cc",
+ "cmake",
+]
+
+[[package]]
+name = "librocksdb_sys"
+version = "0.1.0"
+source = "git+https://github.com/tikv/rust-rocksdb.git#0ca70eadb9e0aaa654c23b1930cbfeaa3d0bad0e"
+dependencies = [
+ "bindgen",
+ "bzip2-sys",
+ "cc",
+ "cmake",
+ "libc",
+ "librocksdb_cloud_sys",
+ "libtitan_sys",
+ "libz-sys",
+ "lz4-sys",
+ "snappy-sys",
+ "zstd-sys",
+]
+
+[[package]]
+name = "libtitan_sys"
+version = "0.0.1"
+source = "git+https://github.com/tikv/rust-rocksdb.git#0ca70eadb9e0aaa654c23b1930cbfeaa3d0bad0e"
+dependencies = [
+ "bzip2-sys",
+ "cc",
+ "cmake",
+ "libc",
+ "libz-sys",
+ "lz4-sys",
+ "snappy-sys",
+ "zstd-sys",
+]
+
+[[package]]
 name = "libz-sys"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1143,6 +1223,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fabed175da42fed1fa0746b0ea71f412aa9d35e76e95e59b192c64b9dc2bf8b"
 dependencies = [
  "cfg-if 0.1.10",
+]
+
+[[package]]
+name = "lz4-sys"
+version = "1.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dca79aa95d8b3226213ad454d328369853be3a1382d89532a854f4d69640acae"
+dependencies = [
+ "cc",
+ "libc",
 ]
 
 [[package]]
@@ -1580,6 +1670,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rocksdb"
+version = "0.3.0"
+source = "git+https://github.com/tikv/rust-rocksdb.git#0ca70eadb9e0aaa654c23b1930cbfeaa3d0bad0e"
+dependencies = [
+ "libc",
+ "librocksdb_sys",
+]
+
+[[package]]
 name = "route-recognizer"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1744,6 +1843,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbee7696b84bbf3d89a1c2eccff0850e3047ed46bfcd2e92c29a2d074d57e252"
 
 [[package]]
+name = "snappy-sys"
+version = "0.1.0"
+source = "git+https://github.com/busyjay/rust-snappy.git?branch=static-link#8c12738bad811397600455d6982aff754ea2ac44"
+dependencies = [
+ "cmake",
+ "libc",
+ "pkg-config",
+]
+
+[[package]]
 name = "sodu-core"
 version = "0.1.0"
 dependencies = [
@@ -1762,6 +1871,7 @@ dependencies = [
  "protobuf-codegen",
  "protoc-grpcio",
  "rand",
+ "rocksdb",
  "serde",
  "skiplist",
  "structopt",
@@ -2321,3 +2431,15 @@ name = "yansi"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fc79f4a1e39857fc00c3f662cbf2651c771f00e9c15fe2abc341806bd46bd71"
+
+[[package]]
+name = "zstd-sys"
+version = "1.4.17+zstd.1.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b89249644df056b522696b1bb9e7c18c87e8ffa3e2f0dc3b0155875d6498f01b"
+dependencies = [
+ "cc",
+ "glob",
+ "itertools",
+ "libc",
+]
