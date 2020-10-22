@@ -218,10 +218,10 @@ mod tests {
         let mut wal = Wal::new(opt.clone()).unwrap();
         let wal_id = wal.current_wal_id();
         let span = generate_span(1);
-        let req = wal.write_spans(span);
+        let req = wal.write_spans(&span);
         ingester.push_span(wal_id, req);
         let span = generate_span(2);
-        let req = wal.write_spans(span);
+        let req = wal.write_spans(&span);
         ingester.push_span(wal_id, req);
         ingester.flush_segment_if_necessary(true);
         ingester.reclaim_submitted_builder_buffer();
@@ -232,19 +232,19 @@ mod tests {
         assert_eq!(segment_file_ids[0], 1);
         // Let's ingest few more entries.
         let span = generate_span(3);
-        let req = wal.write_spans(span);
+        let req = wal.write_spans(&span);
         ingester.push_span(wal_id, req);
         let span = generate_span(4);
-        let req = wal.write_spans(span);
+        let req = wal.write_spans(&span);
         ingester.push_span(wal_id, req);
         ingester.flush_segment_if_necessary(true);
         ingester.reclaim_submitted_builder_buffer();
 
         let span = generate_span(5);
-        let req = wal.write_spans(span);
+        let req = wal.write_spans(&span);
         ingester.push_span(wal_id, req);
         let span = generate_span(6);
-        let req = wal.write_spans(span);
+        let req = wal.write_spans(&span);
         ingester.push_span(wal_id, req);
         ingester.flush_segment_if_necessary(true);
         ingester.reclaim_submitted_builder_buffer();

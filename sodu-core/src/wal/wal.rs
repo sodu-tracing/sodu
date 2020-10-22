@@ -123,9 +123,9 @@ impl Wal {
 
     /// write_spans writes the given span to the wal file using io_uring. wait_for_submitted_wal_span
     /// needs to called before writing the next batch of spans.
-    pub fn write_spans(&mut self, span: Span) -> EncodedRequest {
+    pub fn write_spans(&mut self, span: &Span) -> EncodedRequest {
         self.tmp_encoding_buffer.clear();
-        let indices = encode_span(&span, &mut self.tmp_encoding_buffer);
+        let indices = encode_span(span, &mut self.tmp_encoding_buffer);
         let offset = self
             .tmp_span_buffer
             .write_slice(self.tmp_encoding_buffer.bytes_ref());
@@ -275,7 +275,7 @@ pub mod tests {
         let mut wal_1_span_offsets = Vec::new();
         // write 100 spans.
         for i in 0..100 {
-            let req = wal.write_spans(generate_span(i));
+            let req = wal.write_spans(&generate_span(i));
             wal_1_span_offsets.push(req.wal_offset);
         }
         // Write to file.
@@ -312,7 +312,7 @@ pub mod tests {
         let mut wal_2_span_offsets = Vec::new();
         // write 100 spans.
         for i in 100..200 {
-            let req = wal.write_spans(generate_span(i));
+            let req = wal.write_spans(&generate_span(i));
             wal_2_span_offsets.push(req.wal_offset);
         }
 

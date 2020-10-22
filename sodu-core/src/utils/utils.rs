@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use crate::proto::common::{AnyValue_oneof_value, KeyValue};
+use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
 use crate::proto::service::TimeRange;
 use crate::proto::trace::Span;
 use anyhow::{Context, Result};
@@ -168,4 +168,17 @@ pub fn hash_bytes(input: &[u8]) -> u64 {
     let mut hasher = DefaultHasher::new();
     input.hash(&mut hasher);
     hasher.finish()
+}
+
+/// get_string_val returns string value from anyvalue if the string value present.
+pub fn get_string_val(val: &AnyValue) -> Option<String> {
+    if let Some(value) = &val.value {
+        match value {
+            AnyValue_oneof_value::string_value(str_val) => {
+                return Some(str_val.clone());
+            }
+            _ => {}
+        }
+    }
+    None
 }

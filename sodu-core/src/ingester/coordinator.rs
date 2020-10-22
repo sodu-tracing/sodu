@@ -14,6 +14,8 @@
 
 use crate::ingester::ingester_runner::IngesterRunnerRequest;
 use crate::proto::trace::{ResourceSpans, Span};
+use crate::utils::types::{SERVICE_INSTANCE_ID, SERVICE_NAME};
+use crate::utils::utils::get_string_val;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use log::warn;
 use std::sync::mpsc;
@@ -36,6 +38,10 @@ impl IngesterCoordinator {
     pub fn send_spans(&self, resource_spans: Vec<ResourceSpans>) {
         // batch all the spans for the required shard.
         let mut spans: Vec<Span> = Vec::new();
+        // batch of instance names.
+        let mut instance_names: Vec<String> = Vec::new();
+        // batch of services names.
+        let mut service_names: Vec<String> = Vec::new();
         // Batch the spans according to the hash.
         for resource_span in resource_spans {
             for instrumental_library_span in resource_span.instrumentation_library_spans.into_vec()
@@ -46,6 +52,22 @@ impl IngesterCoordinator {
                     for resource_attribute in
                         resource_span.resource.clone().unwrap().attributes.to_vec()
                     {
+                        // Retrive service names.
+                        if resource_attribute.key == SERVICE_NAME {
+                            if let Some(value) = resource_attribute.value.as_ref() {
+                                if let Some(service_name) = get_string_val(value) {
+                                    service_names.push(service_name);
+                                }
+                            }
+                        }
+                        // Retrive service instance names.
+                        if resource_attribute.key == SERVICE_INSTANCE_ID {
+                            if let Some(value) = resource_attribute.value.as_ref() {
+                                if let Some(instance_name) = get_string_val(value) {
+                                    instance_names.push(instance_name);
+                                }
+                            }
+                        }
                         span.attributes.push(resource_attribute);
                     }
                     spans.push(span);
@@ -56,6 +78,8 @@ impl IngesterCoordinator {
         let req = IngesterRunnerRequest {
             spans: spans,
             done: sender,
+            instance_names: instance_names,
+            service_names: service_names,
         };
         // Send the the batched spans to the respective ingester.
         if let Err(e) = self.transport.try_send(req) {

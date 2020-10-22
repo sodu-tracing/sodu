@@ -14,24 +14,27 @@
 use crate::buffer::buffer::Buffer;
 use crate::options::options::Options;
 use crate::utils::types::WalCheckPoint;
-use parking_lot::Mutex;
 use rocksdb::{DBOptions, Writable, DB};
-use std::collections::HashSet;
 use std::convert::TryInto;
-use std::default::Default;
 use std::u64;
 
 /// WAL_CHECK_POINT is the wal check point key. This gives us the offset where we have to replay
 /// the wal.
-const WAL_CHECK_POINT: &[u8] = b"!sodu!pathukapu!ellai!";
+const WAL_CHECK_POINT: &str = "!sodu!pathukapu!ellai!";
+/// SERVICE_NAME_PREFIX is the service name key prefix. This is used to get the service name. By doing
+/// prefix iteration.
+const SERVICE_NAME_PREFIX: &str = "!sodu!sevai!peyar";
+/// OPERATION_NAME_PREFIX is the operation name key prefix. This is used to get the operation name, by doing
+/// prefix key iteration.
+const OPERATION_NAME_PREFIX: &str = "!sodu!seyal!peyar";
+/// INSTANCE_NAME_PREFIX is the instance name key prefix. This is used to get the operation name, by doing
+/// prefix key iteration.
+const INSTANCE_NAME_PREFIX: &str = "!sodu!mega!kanini!peyar";
 /// SoduMetaStore is used to store meta data releated to sodu-storage.
 pub struct SoduMetaStore {
     /// db is the rocks db instance.
     db: DB,
-    /// services is the list of services where we have ingested traces from.
-    services: Mutex<HashSet<String>>,
-    /// operations is the list of operations where we have ingested spans from.
-    operations: Mutex<HashSet<String>>,
+    empty_val: [u8; 2],
 }
 
 impl SoduMetaStore {
@@ -50,8 +53,7 @@ impl SoduMetaStore {
         .unwrap();
         SoduMetaStore {
             db,
-            services: Mutex::new(HashSet::default()),
-            operations: Mutex::new(HashSet::default()),
+            empty_val: [0; 2],
         }
     }
 
@@ -63,7 +65,7 @@ impl SoduMetaStore {
         buffer.write_raw_slice(&check_point.wal_offset.to_be_bytes());
         buffer.write_raw_slice(&check_point.segment_id.to_be_bytes());
         self.db
-            .put(WAL_CHECK_POINT, buffer.bytes_ref())
+            .put(WAL_CHECK_POINT.as_bytes(), buffer.bytes_ref())
             .map_err(|e| {
                 format!(
                     "error while saving checkpoint for wal id {:?} and wal offset {:?}. err_msg: {:?}",
@@ -77,7 +79,7 @@ impl SoduMetaStore {
     pub fn get_wal_check_point(&self) -> Option<WalCheckPoint> {
         let check_point = self
             .db
-            .get(WAL_CHECK_POINT)
+            .get(WAL_CHECK_POINT.as_bytes())
             .map_err(|e| format!("error while retriving wal check point. err_msg: {:?}", e))
             .unwrap();
         // return the checkpoint if we persisted checkpoint.
@@ -94,5 +96,58 @@ impl SoduMetaStore {
             });
         }
         None
+    }
+
+    /// save_service_name saves service names.
+    pub fn save_service_name(&self, service_name: &String) {
+        self.db
+            .put(
+                &self.create_prefix_index(SERVICE_NAME_PREFIX, service_name),
+                &self.empty_val,
+            )
+            .map_err(|e| {
+                format!(
+                    "error while saving service name {:?}. err_msg {:?}",
+                    service_name, e
+                )
+            })
+            .unwrap();
+    }
+
+    /// save_instance_id saves instance id.
+    pub fn save_instance_id(&self, instance_id: &String) {
+        self.db
+            .put(
+                &self.create_prefix_index(INSTANCE_NAME_PREFIX, instance_id),
+                &self.empty_val,
+            )
+            .map_err(|e| {
+                format!(
+                    "error while saving service name {:?}. err_msg {:?}",
+                    instance_id, e
+                )
+            })
+            .unwrap();
+    }
+
+    /// save_operation_name saves operation name.
+    pub fn save_operation_name(&self, operation_name: &String) {
+        self.db
+            .put(
+                &self.create_prefix_index(OPERATION_NAME_PREFIX, operation_name),
+                &self.empty_val,
+            )
+            .map_err(|e| {
+                format!(
+                    "error while saving operation name {:?}. err_msg {:?}",
+                    operation_name, e
+                )
+            })
+            .unwrap();
+    }
+
+    /// create_prefix_index creates index by prefixing the prefix key.
+    fn create_prefix_index(&self, prefix: &str, val: &String) -> Vec<u8> {
+        format!("{}-{}", prefix, val).into_bytes()
     }
 }
