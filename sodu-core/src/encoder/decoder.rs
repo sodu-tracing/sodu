@@ -286,7 +286,6 @@ mod tests {
         encode_span(&span, &mut buffer);
 
         let mut decode = SpanDecoder::new(buffer.bytes_ref());
-        decode.decode();
         assert_eq!(decode.name, String::from("hello"));
         assert_eq!(decode.attributes.len(), 1);
         assert_eq!(decode.events.len(), 2);

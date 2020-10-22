@@ -110,13 +110,13 @@ fn extract_indices_from_attributes(
 /// is_over_lapping tells that whether the requesting time range is in block time range or not.
 pub fn is_over_lapping_range(req: &TimeRange, block: &TimeRange) -> bool {
     // get all the required data.
-    let req_min_start_ts = req.min_start_ts.unwrap();
-    let req_max_start_ts = req.max_start_ts.unwrap();
+    let req_min_start_ts = req.get_min_start_ts();
+    let req_max_start_ts = req.get_max_start_ts();
     if req_max_start_ts == 0 && req_min_start_ts == 0 {
         return true;
     }
-    let block_min_start_ts = block.min_start_ts.unwrap();
-    let block_max_start_ts = block.max_start_ts.unwrap();
+    let block_min_start_ts = block.get_min_start_ts();
+    let block_max_start_ts = block.get_max_start_ts();
     (req_min_start_ts <= block_min_start_ts && block_min_start_ts <= req_max_start_ts)
         || (req_min_start_ts <= block_max_start_ts && block_max_start_ts <= req_max_start_ts)
 }
