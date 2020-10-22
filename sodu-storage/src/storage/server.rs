@@ -3,7 +3,7 @@ use futures::executor::block_on;
 use futures::prelude::*;
 use grpcio::{ChannelBuilder, Environment, ResourceQuota, RpcContext, ServerBuilder, UnarySink};
 use log::info;
-use sodu_core::proto::service::{QueryRequest, QueryResponse};
+use sodu_core::proto::service::{QueryRequest, QueryResponse, TagRequest, TagResponse};
 use sodu_core::proto::service_grpc::{create_sodu_storage, SoduStorage};
 use sodu_core::query_executor::executor::QueryExecutor;
 use std::sync::Arc;
@@ -19,6 +19,13 @@ impl SoduStorage for StorageServer {
     /// query_trace excutes internal query request.
     fn query_trace(&mut self, ctx: RpcContext, req: QueryRequest, sink: UnarySink<QueryResponse>) {
         let res = self.query_executor.query(req);
+        let f = sink.success(res).map(|_| ());
+        ctx.spawn(f);
+    }
+
+    /// get_tags returns all the tags.
+    fn get_tags(&mut self, ctx: RpcContext, _: TagRequest, sink: UnarySink<TagResponse>) {
+        let res = self.query_executor.get_tags();
         let f = sink.success(res).map(|_| ());
         ctx.spawn(f);
     }

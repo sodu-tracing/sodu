@@ -14,7 +14,7 @@
 use crate::buffer::buffer::Buffer;
 use crate::options::options::Options;
 use crate::utils::types::WalCheckPoint;
-use rocksdb::{DBOptions, Writable, DB};
+use rocksdb::{DBOptions, SeekKey, Writable, DB};
 use std::convert::TryInto;
 use std::u64;
 
@@ -149,5 +149,38 @@ impl SoduMetaStore {
     /// create_prefix_index creates index by prefixing the prefix key.
     fn create_prefix_index(&self, prefix: &str, val: &String) -> Vec<u8> {
         format!("{}-{}", prefix, val).into_bytes()
+    }
+
+    /// get_key_from_index returns the index key.
+    fn get_key_from_index(&self, index_at: usize, key: &[u8]) -> String {
+        String::from_utf8_lossy(&key[index_at..]).to_string()
+    }
+
+    /// get_service_names returns the list of service names.
+    pub fn get_service_names(&self) -> Vec<String> {
+        self.collect_index_keys(SERVICE_NAME_PREFIX)
+    }
+
+    /// get_operation_names returns the list of operation names.
+    pub fn get_operation_names(&self) -> Vec<String> {
+        self.collect_index_keys(OPERATION_NAME_PREFIX)
+    }
+
+    /// get_instance_ids returns the list of instance ids.
+    pub fn get_instance_ids(&self) -> Vec<String> {
+        self.collect_index_keys(INSTANCE_NAME_PREFIX)
+    }
+
+    /// collect_index_keys returns the index key of the given prefix.
+    fn collect_index_keys(&self, prefix: &str) -> Vec<String> {
+        let mut keys = Vec::new();
+        let mut iter = self.db.iter();
+        iter.seek(SeekKey::Key(prefix.as_bytes())).unwrap();
+        while iter.valid().unwrap() {
+            let service_name = self.get_key_from_index(prefix.len(), iter.key());
+            keys.push(service_name);
+            iter.next().unwrap();
+        }
+        keys
     }
 }

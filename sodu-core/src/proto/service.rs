@@ -2201,6 +2201,368 @@ impl ::protobuf::reflect::ProtobufValue for QueryResponse {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+pub struct TagRequest {
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a TagRequest {
+    fn default() -> &'a TagRequest {
+        <TagRequest as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl TagRequest {
+    pub fn new() -> TagRequest {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for TagRequest {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> TagRequest {
+        TagRequest::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let fields = ::std::vec::Vec::new();
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<TagRequest>(
+                "TagRequest",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static TagRequest {
+        static instance: ::protobuf::rt::LazyV2<TagRequest> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(TagRequest::new)
+    }
+}
+
+impl ::protobuf::Clear for TagRequest {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for TagRequest {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for TagRequest {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+pub struct TagResponse {
+    // message fields
+    pub service_names: ::protobuf::RepeatedField<::std::string::String>,
+    pub operation_names: ::protobuf::RepeatedField<::std::string::String>,
+    pub instance_ids: ::protobuf::RepeatedField<::std::string::String>,
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a TagResponse {
+    fn default() -> &'a TagResponse {
+        <TagResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl TagResponse {
+    pub fn new() -> TagResponse {
+        ::std::default::Default::default()
+    }
+
+    // repeated string service_names = 1;
+
+
+    pub fn get_service_names(&self) -> &[::std::string::String] {
+        &self.service_names
+    }
+    pub fn clear_service_names(&mut self) {
+        self.service_names.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_service_names(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.service_names = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_service_names(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.service_names
+    }
+
+    // Take field
+    pub fn take_service_names(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.service_names, ::protobuf::RepeatedField::new())
+    }
+
+    // repeated string operation_names = 2;
+
+
+    pub fn get_operation_names(&self) -> &[::std::string::String] {
+        &self.operation_names
+    }
+    pub fn clear_operation_names(&mut self) {
+        self.operation_names.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_operation_names(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.operation_names = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_operation_names(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.operation_names
+    }
+
+    // Take field
+    pub fn take_operation_names(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.operation_names, ::protobuf::RepeatedField::new())
+    }
+
+    // repeated string instance_ids = 3;
+
+
+    pub fn get_instance_ids(&self) -> &[::std::string::String] {
+        &self.instance_ids
+    }
+    pub fn clear_instance_ids(&mut self) {
+        self.instance_ids.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_instance_ids(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.instance_ids = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_instance_ids(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.instance_ids
+    }
+
+    // Take field
+    pub fn take_instance_ids(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.instance_ids, ::protobuf::RepeatedField::new())
+    }
+}
+
+impl ::protobuf::Message for TagResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.service_names)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.operation_names)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.instance_ids)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        for value in &self.service_names {
+            my_size += ::protobuf::rt::string_size(1, &value);
+        };
+        for value in &self.operation_names {
+            my_size += ::protobuf::rt::string_size(2, &value);
+        };
+        for value in &self.instance_ids {
+            my_size += ::protobuf::rt::string_size(3, &value);
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        for v in &self.service_names {
+            os.write_string(1, &v)?;
+        };
+        for v in &self.operation_names {
+            os.write_string(2, &v)?;
+        };
+        for v in &self.instance_ids {
+            os.write_string(3, &v)?;
+        };
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> TagResponse {
+        TagResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "service_names",
+                |m: &TagResponse| { &m.service_names },
+                |m: &mut TagResponse| { &mut m.service_names },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "operation_names",
+                |m: &TagResponse| { &m.operation_names },
+                |m: &mut TagResponse| { &mut m.operation_names },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "instance_ids",
+                |m: &TagResponse| { &m.instance_ids },
+                |m: &mut TagResponse| { &mut m.instance_ids },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<TagResponse>(
+                "TagResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static TagResponse {
+        static instance: ::protobuf::rt::LazyV2<TagResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(TagResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for TagResponse {
+    fn clear(&mut self) {
+        self.service_names.clear();
+        self.operation_names.clear();
+        self.instance_ids.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for TagResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for TagResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\rservice.proto\"\x8f\x01\n\rChunkMetadata\x12)\n\ntime_range\x18\x01\
     \x20\x02(\x0b2\n.TimeRangeR\ttimeRange\x12\x16\n\x06offset\x18\x02\x20\
@@ -2232,8 +2594,12 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x20\x02(\x04R\nmaxStartTs\"@\n\rInternalTrace\x12\x19\n\x08start_ts\x18\
     \x01\x20\x02(\x04R\x07startTs\x12\x14\n\x05trace\x18\x02\x20\x02(\x0cR\
     \x05trace\"7\n\rQueryResponse\x12&\n\x06traces\x18\x01\x20\x03(\x0b2\x0e\
-    .InternalTraceR\x06traces2<\n\x0bSoduStorage\x12-\n\nQueryTrace\x12\r.Qu\
-    eryRequest\x1a\x0e.QueryResponse\"\0\
+    .InternalTraceR\x06traces\"\x0c\n\nTagRequest\"~\n\x0bTagResponse\x12#\n\
+    \rservice_names\x18\x01\x20\x03(\tR\x0cserviceNames\x12'\n\x0foperation_\
+    names\x18\x02\x20\x03(\tR\x0eoperationNames\x12!\n\x0cinstance_ids\x18\
+    \x03\x20\x03(\tR\x0binstanceIds2d\n\x0bSoduStorage\x12-\n\nQueryTrace\
+    \x12\r.QueryRequest\x1a\x0e.QueryResponse\"\0\x12&\n\x07GetTags\x12\x0b.\
+    TagRequest\x1a\x0c.TagResponse\"\0\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

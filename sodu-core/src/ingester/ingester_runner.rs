@@ -28,8 +28,11 @@ use std::thread;
 pub struct IngesterRunnerRequest {
     /// spans that needs to be ingested.
     pub spans: Vec<Span>,
+    /// done is an one shot channel.
     pub done: mpsc::Sender<u8>,
+    /// instace_names is the list of incoming instance names.
     pub instance_names: Vec<String>,
+    /// service_names is the list of incoming service names.
     pub service_names: Vec<String>,
 }
 /// IngesterRunner is responsible for ingesting spans to the segment.

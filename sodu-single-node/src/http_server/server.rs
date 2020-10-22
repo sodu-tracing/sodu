@@ -18,6 +18,17 @@ struct SoduState {
     executor: QueryExecutor,
 }
 
+/// TagResponse is the https reponse for get tag request.
+#[derive(Deserialize, Serialize, Debug)]
+struct TagResponse {
+    /// operation_names contains all the operation that this sodu-instance serves.
+    operation_names: Vec<String>,
+    /// instance_names contains a;l the instance name that this sodu-instance serves.
+    instance_names: Vec<String>,
+    /// services_names contains all the service name that this sodu-instance serves.
+    services_names: Vec<String>,
+}
+
 /// HttpQueryRequest is the json represention of the query request.
 #[derive(Deserialize, Serialize, Debug)]
 struct HttpQueryRequest {

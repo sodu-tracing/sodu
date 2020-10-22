@@ -25,6 +25,13 @@ const METHOD_SODU_STORAGE_QUERY_TRACE: ::grpcio::Method<super::service::QueryReq
     resp_mar: ::grpcio::Marshaller { ser: ::grpcio::pb_ser, de: ::grpcio::pb_de },
 };
 
+const METHOD_SODU_STORAGE_GET_TAGS: ::grpcio::Method<super::service::TagRequest, super::service::TagResponse> = ::grpcio::Method {
+    ty: ::grpcio::MethodType::Unary,
+    name: "/SoduStorage/GetTags",
+    req_mar: ::grpcio::Marshaller { ser: ::grpcio::pb_ser, de: ::grpcio::pb_de },
+    resp_mar: ::grpcio::Marshaller { ser: ::grpcio::pb_ser, de: ::grpcio::pb_de },
+};
+
 #[derive(Clone)]
 pub struct SoduStorageClient {
     client: ::grpcio::Client,
@@ -52,6 +59,22 @@ impl SoduStorageClient {
     pub fn query_trace_async(&self, req: &super::service::QueryRequest) -> ::grpcio::Result<::grpcio::ClientUnaryReceiver<super::service::QueryResponse>> {
         self.query_trace_async_opt(req, ::grpcio::CallOption::default())
     }
+
+    pub fn get_tags_opt(&self, req: &super::service::TagRequest, opt: ::grpcio::CallOption) -> ::grpcio::Result<super::service::TagResponse> {
+        self.client.unary_call(&METHOD_SODU_STORAGE_GET_TAGS, req, opt)
+    }
+
+    pub fn get_tags(&self, req: &super::service::TagRequest) -> ::grpcio::Result<super::service::TagResponse> {
+        self.get_tags_opt(req, ::grpcio::CallOption::default())
+    }
+
+    pub fn get_tags_async_opt(&self, req: &super::service::TagRequest, opt: ::grpcio::CallOption) -> ::grpcio::Result<::grpcio::ClientUnaryReceiver<super::service::TagResponse>> {
+        self.client.unary_call_async(&METHOD_SODU_STORAGE_GET_TAGS, req, opt)
+    }
+
+    pub fn get_tags_async(&self, req: &super::service::TagRequest) -> ::grpcio::Result<::grpcio::ClientUnaryReceiver<super::service::TagResponse>> {
+        self.get_tags_async_opt(req, ::grpcio::CallOption::default())
+    }
     pub fn spawn<F>(&self, f: F) where F: ::futures::Future<Output = ()> + Send + 'static {
         self.client.spawn(f)
     }
@@ -59,13 +82,18 @@ impl SoduStorageClient {
 
 pub trait SoduStorage {
     fn query_trace(&mut self, ctx: ::grpcio::RpcContext, req: super::service::QueryRequest, sink: ::grpcio::UnarySink<super::service::QueryResponse>);
+    fn get_tags(&mut self, ctx: ::grpcio::RpcContext, req: super::service::TagRequest, sink: ::grpcio::UnarySink<super::service::TagResponse>);
 }
 
 pub fn create_sodu_storage<S: SoduStorage + Send + Clone + 'static>(s: S) -> ::grpcio::Service {
     let mut builder = ::grpcio::ServiceBuilder::new();
-    let mut instance = s;
+    let mut instance = s.clone();
     builder = builder.add_unary_handler(&METHOD_SODU_STORAGE_QUERY_TRACE, move |ctx, req, resp| {
         instance.query_trace(ctx, req, resp)
+    });
+    let mut instance = s;
+    builder = builder.add_unary_handler(&METHOD_SODU_STORAGE_GET_TAGS, move |ctx, req, resp| {
+        instance.get_tags(ctx, req, resp)
     });
     builder.build()
 }

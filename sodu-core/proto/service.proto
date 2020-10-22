@@ -45,6 +45,15 @@ message InternalTrace {
 
 message QueryResponse { repeated InternalTrace traces = 1; }
 
+message TagRequest {}
+
+message TagResponse {
+  repeated string service_names = 1;
+  repeated string operation_names = 2;
+  repeated string instance_ids = 3;
+}
+
 service SoduStorage {
   rpc QueryTrace(QueryRequest) returns (QueryResponse) {}
+  rpc GetTags(TagRequest) returns (TagResponse) {}
 }

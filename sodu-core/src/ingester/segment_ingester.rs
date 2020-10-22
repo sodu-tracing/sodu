@@ -267,6 +267,11 @@ impl SegmentIngester {
         }
         segments
     }
+
+    /// get_meta_store returs the meta_store
+    pub fn get_meta_store(&self) -> Arc<SoduMetaStore> {
+        self.meta_store.clone()
+    }
 }
 
 #[cfg(test)]

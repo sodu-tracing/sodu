@@ -14,7 +14,8 @@
 
 use crate::buffer::buffer::Buffer;
 use crate::ingester::segment_ingester::SegmentIngester;
-use crate::proto::service::{InternalTrace, QueryRequest, QueryResponse};
+use crate::meta_store::sodu_meta_store::SoduMetaStore;
+use crate::proto::service::{InternalTrace, QueryRequest, QueryResponse, TagResponse};
 use crate::segment::segment_file::SegmentFile;
 use crate::utils::utils::{
     calculate_trace_size, get_file_ids, is_over_lapping_range, read_files_in_dir,
@@ -34,13 +35,16 @@ pub struct QueryExecutor {
     ingester: Arc<Mutex<SegmentIngester>>,
     /// segment_path is the path of segment files.
     segment_path: PathBuf,
+    meta_store: Arc<SoduMetaStore>,
 }
 
 impl QueryExecutor {
     pub fn new(segment_path: PathBuf, ingester: Arc<Mutex<SegmentIngester>>) -> QueryExecutor {
+        let meta_store = ingester.lock().get_meta_store();
         QueryExecutor {
             ingester,
             segment_path,
+            meta_store,
         }
     }
     /// query is used to query the sodu instance and return back the filtered traces for the given
@@ -88,7 +92,7 @@ impl QueryExecutor {
                     .join(format!("{:?}.segment", segment_file_id)),
             )
             .unwrap();
-            let mut segment_file = SegmentFile::new(file)
+            let segment_file = SegmentFile::new(file)
                 .context(format!(
                     "error opening segment file {:?} while querying",
                     segment_file_id
@@ -118,6 +122,16 @@ impl QueryExecutor {
         let mut res = QueryResponse::default();
         res.set_traces(RepeatedField::from(internal_traces));
         return res;
+    }
+
+    /// get_tags returns the all the tags.
+    pub fn get_tags(&self) -> TagResponse {
+        TagResponse {
+            service_names: RepeatedField::from(self.meta_store.get_service_names()),
+            instance_ids: RepeatedField::from(self.meta_store.get_instance_ids()),
+            operation_names: RepeatedField::from(self.meta_store.get_operation_names()),
+            ..Default::default()
+        }
     }
 }
 
