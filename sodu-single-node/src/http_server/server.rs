@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::default::Default;
 use tide::http::mime::Mime;
 use tide::prelude::*;
-use tide::{Request, Response};
+use tide::{Body, Request, Response};
 
 /// SoduState contains the requrired paramenter to execute user query.
 /// It is used to pass it around the tide framework.
@@ -23,10 +23,10 @@ struct SoduState {
 struct TagResponse {
     /// operation_names contains all the operation that this sodu-instance serves.
     operation_names: Vec<String>,
-    /// instance_names contains a;l the instance name that this sodu-instance serves.
-    instance_names: Vec<String>,
+    /// instance_ids contains all the instance name that this sodu-instance serves.
+    instance_ids: Vec<String>,
     /// services_names contains all the service name that this sodu-instance serves.
-    services_names: Vec<String>,
+    service_names: Vec<String>,
 }
 
 /// HttpQueryRequest is the json represention of the query request.
@@ -49,6 +49,7 @@ struct HttpQueryRequest {
 /// start_http_server start http server to serve user quries.
 pub fn start_http_server(executor: QueryExecutor) {
     let mut app = tide::with_state(SoduState { executor });
+    // query handler is used for querying sodu.
     app.at("/query")
         .post(|mut req: Request<SoduState>| async move {
             let executor = &req.state().executor.clone();
@@ -79,5 +80,16 @@ pub fn start_http_server(executor: QueryExecutor) {
             res.set_body(buffer.bytes());
             Ok(res)
         });
+    // tag handler returns all the tags.
+    app.at("/tags").get(|req: Request<SoduState>| async move {
+        let executor = &req.state().executor;
+        let tags = executor.get_tags();
+        let res = TagResponse {
+            service_names: tags.service_names.to_vec(),
+            operation_names: tags.operation_names.to_vec(),
+            instance_ids: tags.instance_ids.to_vec(),
+        };
+        Ok(Body::from_json(&res)?)
+    });
     task::block_on(async move { app.listen("127.0.0.1:8080").await.unwrap() });
 }
