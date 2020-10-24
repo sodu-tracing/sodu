@@ -44,13 +44,6 @@ impl Buffer {
         let offset = self.position;
         // Write the len of the buffer first.
         self.write_size(buf.len() as u32);
-        if self.inner.len() - self.position < buf.len() {
-            self.inner.reserve(1);
-            unsafe {
-                self.inner.set_len(self.inner.capacity());
-            }
-            return self.write_slice(buf);
-        }
         self.write_raw_slice(buf);
         offset
     }
@@ -91,6 +84,13 @@ impl Buffer {
 
     /// write byte writes byte to the buffer.
     pub fn write_byte(&mut self, b: u8) {
+        if self.inner.len() - self.position < 1 {
+            self.inner.reserve(1);
+            unsafe {
+                self.inner.set_len(self.inner.capacity());
+            }
+            return self.write_byte(b);
+        }
         self.inner[self.position] = b;
         self.position = self.position + 1;
     }
@@ -136,6 +136,7 @@ impl Buffer {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::buffer::buffer_reader::BufferReader;
 
     pub fn get_buffer(size: usize) -> Buffer {
         let mut buffer = Buffer::with_size(10);
@@ -153,5 +154,13 @@ pub mod tests {
         let mut buffer = Buffer::with_size(1024);
         buffer.write_raw_slice(&[1, 2, 3, 5, 12]);
         assert_eq!(buffer.bytes_ref(), &[1, 2, 3, 5, 12]);
+    }
+
+    #[test]
+    fn test_resize() {
+        let mut buffer = Buffer::with_size(1);
+        buffer.write_slice(&[0; 1000]);
+        let mut reader = BufferReader::new(buffer.bytes_ref());
+        assert_eq!(reader.read_slice().unwrap().unwrap(), &[0; 1000]);
     }
 }

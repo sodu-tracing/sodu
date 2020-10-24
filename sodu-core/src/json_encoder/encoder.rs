@@ -233,6 +233,7 @@ mod tests {
     use crate::encoder::span::encode_span;
     use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
     use crate::proto::trace::{Span, Span_Event, Span_Link};
+    use crate::utils::utils::spans_to_trace;
     use protobuf::{RepeatedField, SingularPtrField};
 
     #[test]
@@ -272,5 +273,46 @@ mod tests {
             String::from_utf8_lossy(buffer_2.bytes_ref()).to_string(),
             r#"{"trace_id":5506010466157640574,"spans":[{"span_id":5506010466157640574,"start_unix_nano":200,"end_unix_nano":203,"span_kind":0,"name":"hello","attributes":[{"key": "string kv", "value":"let's make it right"}],"events":[{"time_unix_nano":100,"name":"log 1","attributes":[{"key": "string kv", "value":"let's make it right"}]},{"time_unix_nano":100,"name":"log2","attributes":[{"key": "string kv", "value":"let's make it right"}]}],"links":[{"trace_id":5506010466157640574,"span_id":5506010466157640574,"trace_state":"","attributes":[{"key": "string kv", "value":"let's make it right"}]}]}]}"#
         )
+    }
+
+    #[test]
+    fn test_trace_encoding() {
+        let mut span = Span::default();
+        span.trace_id = vec![0; 16];
+        span.span_id = vec![0; 16];
+        span.start_time_unix_nano = 200;
+        span.end_time_unix_nano = 203;
+        span.name = String::from("hello");
+        let mut kv = KeyValue::default();
+        kv.key = String::from("string kv");
+        let mut val = AnyValue::default();
+        val.value = Some(AnyValue_oneof_value::string_value(String::from(
+            "let's make it right",
+        )));
+        kv.value = SingularPtrField::from(Some(val));
+        span.attributes = RepeatedField::from(vec![kv.clone()]);
+        let mut event = Span_Event::default();
+        event.name = String::from("log 1");
+        event.time_unix_nano = 100;
+        event.attributes = RepeatedField::from(vec![kv.clone()]);
+        let mut events = vec![event.clone()];
+        event.name = String::from("log2");
+        events.push(event);
+        span.events = RepeatedField::from(events);
+        let mut link = Span_Link::default();
+        link.attributes = RepeatedField::from(vec![kv.clone()]);
+        link.span_id = vec![0; 16];
+        link.trace_id = vec![0; 16];
+        span.links = RepeatedField::from(vec![link]);
+        let mut buffer = Buffer::with_size(2 << 20);
+        encode_span(&span, &mut buffer);
+        let mut trace = Vec::new();
+        trace.push(buffer.bytes_ref());
+        let mut buffer_2 = Buffer::with_size(2 << 20);
+        encode_span(&span, &mut buffer_2);
+        trace.push(buffer_2.bytes_ref());
+        let encoded_trace = spans_to_trace(trace);
+        let mut json_buffer = Buffer::with_size(2 << 20);
+        encode_trace(&mut json_buffer, &encoded_trace[..]);
     }
 }

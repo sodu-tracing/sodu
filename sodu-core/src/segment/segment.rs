@@ -198,7 +198,9 @@ impl Segment {
                 continue;
             }
             // skip trace offset if it's not falling in the given time range.
-            if trace_offset.0 > start_ts || trace_offset.0 < end_ts {
+            if (trace_offset.0 > start_ts || trace_offset.0 < end_ts)
+                && (start_ts != 0 && end_ts != 0)
+            {
                 continue;
             }
             trace_offsets.push(trace_offset.clone());
@@ -224,9 +226,13 @@ impl Segment {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::encoder::decoder::decode_span;
     use crate::encoder::span::encode_span;
+    use crate::json_encoder::encoder::encode_trace;
     use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
     use crate::proto::trace::{Span, Span_Event, Span_Link};
+    use crate::utils::utils::{hash_bytes, spans_to_trace};
+    use crate::wal::wal::EncodedRequest;
     use protobuf::{Message, RepeatedField, SingularPtrField};
     use rand::Rng;
 
@@ -290,47 +296,48 @@ pub mod tests {
     pub fn gen_traces(mut start_ts: u64, num: usize) -> Vec<Vec<Span>> {
         let mut traces = Vec::new();
         for _ in 0..num {
-            start_ts += 10;
+            start_ts += 30;
             traces.push(gen_trace(start_ts));
         }
         traces
     }
-    // #[test]
-    // fn test_memory_segment() {
-    //     let start_ts = SystemTime::now()
-    //         .duration_since(SystemTime::UNIX_EPOCH)
-    //         .unwrap()
-    //         .as_secs();
-    //     let mut traces = gen_traces(start_ts);
-    //     let mut segment = Segment::new();
-    //     let mut buffer = Buffer::with_size(3 << 20);
-    //     for trace in traces.clone().into_iter() {
-    //         for span in trace.into_iter() {
-    //             let mut hasher = DefaultHasher::new();
-    //             span.trace_id.hash(&mut hasher);
-    //             let hashed_span_id = hasher.finish();
-    //             buffer.clear();
-    //             let indices = encode_span(&span, &mut buffer);
-    //             segment.put_span(
-    //                 hashed_span_id,
-    //                 buffer.bytes_ref(),
-    //                 span.start_time_unix_nano,
-    //                 indices,
-    //             );
-    //         }
-    //     }
-    //     assert_eq!(
-    //         segment.max_start_ts,
-    //         traces[traces.len() - 1][traces[0].len() - 1].start_time_unix_nano
-    //     );
-    //     assert_eq!(segment.min_start_ts, traces[0][0].start_time_unix_nano);
-    //     // Check the iterator whether traces are coming is same order.
-    //     let mut iterator = segment.iter();
-    //     traces.reverse();
-    //     for trace in traces.into_iter() {
-    //         let (start_ts, spans) = iterator.next().unwrap();
-    //         assert_eq!(start_ts, trace[0].start_time_unix_nano);
-    //         assert_eq!(spans.len(), trace.len());
-    //     }
-    // }
+    #[test]
+    fn test_memory_segment() {
+        let start_ts = 2;
+        let mut traces = gen_traces(start_ts, 1000);
+        let mut segment = Segment::new();
+        let mut buffer = Buffer::with_size(3 << 20);
+        for trace in traces.clone().into_iter() {
+            for span in trace.into_iter() {
+                let hashed_trace_id = hash_bytes(&span.trace_id[..]);
+                buffer.clear();
+                let indices = encode_span(&span, &mut buffer);
+                let req = EncodedRequest {
+                    start_ts: span.start_time_unix_nano,
+                    encoded_span: buffer.bytes_ref(),
+                    indices: indices,
+                    wal_offset: 0,
+                };
+                segment.put_span(hashed_trace_id, 1, req);
+            }
+        }
+        assert_eq!(
+            segment.max_start_ts,
+            traces[traces.len() - 1][traces[0].len() - 1].start_time_unix_nano
+        );
+        assert_eq!(segment.min_start_ts, traces[0][0].start_time_unix_nano);
+        // Check the iterator whether traces are coming is same order.
+        let mut iterator = segment.iter();
+        traces.reverse();
+
+        for trace in traces.into_iter() {
+            let (start_ts, spans) = iterator.next().unwrap();
+            assert_eq!(start_ts, trace[0].start_time_unix_nano);
+            assert_eq!(spans.len(), trace.len());
+            for (idx, original_span) in trace.iter().enumerate() {
+                let decoded_span = decode_span(spans[idx]);
+                assert_eq!(original_span, &decoded_span);
+            }
+        }
+    }
 }

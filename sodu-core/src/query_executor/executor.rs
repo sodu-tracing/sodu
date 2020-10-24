@@ -18,7 +18,7 @@ use crate::meta_store::sodu_meta_store::SoduMetaStore;
 use crate::proto::service::{InternalTrace, QueryRequest, QueryResponse, TagResponse};
 use crate::segment::segment_file::SegmentFile;
 use crate::utils::utils::{
-    calculate_trace_size, get_file_ids, is_over_lapping_range, read_files_in_dir,
+    calculate_trace_size, get_file_ids, is_over_lapping_range, read_files_in_dir, spans_to_trace,
 };
 use anyhow::Context;
 use parking_lot::Mutex;
@@ -133,18 +133,4 @@ impl QueryExecutor {
             ..Default::default()
         }
     }
-}
-
-/// spans_to_trace is used to convert list of spans to trace.
-fn spans_to_trace(spans: Vec<&[u8]>) -> Vec<u8> {
-    let size = calculate_trace_size(&spans);
-    let mut buffer = Buffer::with_size(size);
-    for (idx, span) in spans.into_iter().enumerate() {
-        if idx == 0 {
-            buffer.write_raw_slice(span);
-            continue;
-        }
-        buffer.write_raw_slice(&span[16..]);
-    }
-    buffer.bytes()
 }

@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use crate::buffer::buffer::Buffer;
 use crate::proto::common::{AnyValue, AnyValue_oneof_value, KeyValue};
 use crate::proto::service::TimeRange;
 use crate::proto::trace::Span;
@@ -181,4 +182,18 @@ pub fn get_string_val(val: &AnyValue) -> Option<String> {
         }
     }
     None
+}
+
+/// spans_to_trace is used to convert list of spans to trace.
+pub fn spans_to_trace(spans: Vec<&[u8]>) -> Vec<u8> {
+    let size = calculate_trace_size(&spans);
+    let mut buffer = Buffer::with_size(size);
+    for (idx, span) in spans.into_iter().enumerate() {
+        if idx == 0 {
+            buffer.write_raw_slice(span);
+            continue;
+        }
+        buffer.write_raw_slice(&span[16..]);
+    }
+    buffer.bytes()
 }

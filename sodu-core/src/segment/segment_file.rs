@@ -70,10 +70,12 @@ impl SegmentFile {
         }
         // Filter all the chunks that falls in the specified time range.
         let chunks = self.metadata.chunks.to_vec();
-        let chunks: Vec<ChunkMetadata> = chunks
+        let mut chunks: Vec<ChunkMetadata> = chunks
             .into_iter()
             .filter(|chunk| is_over_lapping_range(req.get_time_range(), chunk.get_time_range()))
             .collect();
+        // reverse the chunks, since file iterator pop one by one.
+        chunks.reverse();
         // return the iterator.
         Some(SegmentFileIterator {
             file: self.file,

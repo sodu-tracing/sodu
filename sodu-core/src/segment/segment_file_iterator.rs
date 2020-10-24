@@ -37,7 +37,9 @@ impl Iterator for SegmentFileIterator {
                 let decoder = InplaceSpanDecoder(trace);
                 let trace_start_ts = decoder.start_ts();
                 // skip this trace if the trace is not falling in iterator range.
-                if trace_start_ts > self.max_start_ts || trace_start_ts < self.min_start_ts {
+                if (trace_start_ts > self.max_start_ts || trace_start_ts < self.min_start_ts)
+                    && (self.max_start_ts != 0 && self.min_start_ts != 0)
+                {
                     return self.next();
                 }
                 // skip if the current trace if the trace id is not part of filtered
@@ -73,6 +75,7 @@ impl Iterator for SegmentFileIterator {
 pub mod tests {
     use super::*;
     use crate::buffer::buffer::Buffer;
+    use crate::json_encoder::encoder::encode_trace;
     use crate::proto::service::QueryRequest;
     use crate::segment::segment::tests::gen_traces;
     use crate::segment::segment::Segment;
@@ -88,7 +91,7 @@ pub mod tests {
     fn test_segment_file_iterator() {
         // create segment file.
         let mut segment = Segment::new();
-        let traces = gen_traces(100, 1);
+        let traces = gen_traces(100, 10000);
         let mut buffer = Buffer::with_size(3 << 20);
         for trace in &traces {
             for span in trace {
