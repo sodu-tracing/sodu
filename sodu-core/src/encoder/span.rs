@@ -38,6 +38,12 @@ pub const INT_VAL_TYPE: u8 = 9;
 pub const STRING_VAL_TYPE: u8 = 10;
 // Tells that span is ended.
 pub const SPAN_END: u8 = 11;
+// Tells that span is ended.
+pub const ATTRIBUTE_NOT_EXIST: u8 = 12;
+// Tells that span is ended.
+pub const EVENT_NOT_EXIST: u8 = 13;
+// Tells that span is ended.
+pub const LINK_NOT_EXIST: u8 = 14;
 
 /// encode_span encodes the given span into the buffer.
 pub fn encode_span(span: &Span, buffer: &mut Buffer) -> HashSet<String> {
@@ -63,18 +69,22 @@ pub fn encode_span(span: &Span, buffer: &mut Buffer) -> HashSet<String> {
 }
 
 fn encode_event(events: &[Span_Event], buffer: &mut Buffer, indices: &mut HashSet<String>) {
-    if events.len() == 0 {}
+    if events.len() == 0 {
+        buffer.write_byte(EVENT_NOT_EXIST);
+    }
     for event in events {
         buffer.write_byte(EVENT_TYPE);
         buffer.write_raw_slice(&event.time_unix_nano.to_be_bytes());
         buffer.write_slice(event.name.as_bytes());
         encode_attributes(&event.attributes, buffer, indices);
     }
+    buffer.write_byte(EVENT_NOT_EXIST);
 }
 
 /// encode_links encode span links.
 fn encode_links(links: &[Span_Link], buffer: &mut Buffer, indices: &mut HashSet<String>) {
     if links.len() == 0 {
+        buffer.write_byte(LINK_NOT_EXIST);
         return;
     }
     for link in links {
@@ -84,10 +94,12 @@ fn encode_links(links: &[Span_Link], buffer: &mut Buffer, indices: &mut HashSet<
         buffer.write_slice(link.trace_state.as_bytes());
         encode_attributes(&link.attributes, buffer, indices);
     }
+    buffer.write_byte(LINK_NOT_EXIST);
 }
 
 fn encode_attributes(attributes: &[KeyValue], buffer: &mut Buffer, indices: &mut HashSet<String>) {
     if attributes.len() == 0 {
+        buffer.write_byte(ATTRIBUTE_NOT_EXIST);
         return;
     }
     for attribute in attributes {
@@ -134,6 +146,7 @@ fn encode_attributes(attributes: &[KeyValue], buffer: &mut Buffer, indices: &mut
             }
         }
     }
+    buffer.write_byte(ATTRIBUTE_NOT_EXIST);
 }
 
 #[inline(always)]

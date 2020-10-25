@@ -115,14 +115,13 @@ fn encode_span(buf: &mut Buffer, reader: &mut BufferReader) {
 
 /// encode_span encodes the link into json structure.
 fn encode_link(buf: &mut Buffer, reader: &mut BufferReader, prev: bool) {
-    reader.peek_byte().map(|meta| {
+    reader.read_byte().map(|meta| {
         if meta != LINK_TYPE {
             return;
         }
         if prev {
             buf.write_byte(b',');
         }
-        reader.consume(1).unwrap();
         buf.write_byte(b'{');
         let trace_id = reader.read_exact_length(16).unwrap();
         buf.write_raw_slice(format!(r#""trace_id":{:?},"#, hash_bytes(trace_id)).as_bytes());
@@ -141,11 +140,10 @@ fn encode_link(buf: &mut Buffer, reader: &mut BufferReader, prev: bool) {
 
 /// encode_span encodes the event into json structure.
 fn encode_event(buf: &mut Buffer, reader: &mut BufferReader, prev: bool) {
-    reader.peek_byte().map(|meta| {
+    reader.read_byte().map(|meta| {
         if meta != EVENT_TYPE {
             return;
         }
-        reader.consume(1).unwrap();
         if prev {
             buf.write_byte(b',');
         }
@@ -171,7 +169,7 @@ fn encode_event(buf: &mut Buffer, reader: &mut BufferReader, prev: bool) {
 
 /// encode_span attribute the span into json structure.
 fn encode_attribute(buf: &mut Buffer, reader: &mut BufferReader, prev: bool) {
-    reader.peek_byte().map(|meta| {
+    reader.read_byte().map(|meta| {
         if meta != ATTRIBUTE_TYPE {
             return;
         }
@@ -180,7 +178,6 @@ fn encode_attribute(buf: &mut Buffer, reader: &mut BufferReader, prev: bool) {
             // the current attribute.
             buf.write_byte(b',');
         }
-        reader.consume(1).unwrap();
         match reader.read_byte().unwrap() {
             BOOL_VAL_TYPE => {
                 let key =
@@ -307,11 +304,11 @@ mod tests {
         let mut buffer = Buffer::with_size(2 << 20);
         encode_span(&span, &mut buffer);
         let mut trace = Vec::new();
-        trace.push(buffer.bytes_ref());
-        let mut buffer_2 = Buffer::with_size(2 << 20);
-        encode_span(&span, &mut buffer_2);
-        trace.push(buffer_2.bytes_ref());
-        let encoded_trace = spans_to_trace(trace);
+        let span_bytes = buffer.bytes();
+        for _ in 0..10 {
+            trace.push(span_bytes.clone());
+        }
+        let encoded_trace = spans_to_trace(trace.iter().map(|a| &a[..]).collect());
         let mut json_buffer = Buffer::with_size(2 << 20);
         encode_trace(&mut json_buffer, &encoded_trace[..]);
     }

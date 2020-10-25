@@ -23,6 +23,7 @@ use iou::IoUring;
 use log::info;
 use std::collections::HashSet;
 use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 
@@ -83,7 +84,7 @@ impl Wal {
         // Find the last file and decide whether to create a new wal file or you can use the existing
         // file.
         let last_file_id = file_ids[file_ids.len() - 1];
-        let wal_file = File::with_options()
+        let mut wal_file = File::with_options()
             .read(true)
             .write(true)
             .open(opt.wal_path.join(format!("{:?}.wal", last_file_id)))
@@ -95,6 +96,8 @@ impl Wal {
         ))?;
         if metadata.len() < 1024 << 20 {
             // Last wal file is lesser than 1 gb so let's just use this file itself.
+            // Since, we'll be writing incoming request. seek the file to the end.
+            wal_file.seek(SeekFrom::End(0)).unwrap();
             return Ok(Wal {
                 last_wal_id: last_file_id,
                 tmp_span_buffer: Buffer::with_size(4 << 20),

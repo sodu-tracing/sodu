@@ -86,13 +86,16 @@ impl SegmentBuilder {
         let offset = self.buffer.size();
         // Write the trace size.
         self.buffer.write_size(trace_size as u32);
+        let mut tmp_trace_id = Vec::new();
         for (idx, span) in trace.into_iter().enumerate() {
             // Write the first span with trace_id. This will give us
             // little bit of compression.
             if idx == 0 {
                 self.buffer.write_raw_slice(span);
+                tmp_trace_id = span[..16].to_vec();
                 continue;
             }
+            assert_eq!(&tmp_trace_id[..], &span[..16]);
             self.buffer.write_raw_slice(&span[16..]);
         }
         // Update the offset index for the current trace.

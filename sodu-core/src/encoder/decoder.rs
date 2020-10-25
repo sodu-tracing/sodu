@@ -125,14 +125,13 @@ impl<'a> SpanDecoder<'a> {
     /// decode_attributes decodes the attribute and add the key value to the given
     /// vector.
     fn decode_attributes(&mut self, attributes: &mut Vec<KeyValue>) {
-        let meta = self.reader.peek_byte();
+        let meta = self.reader.read_byte();
         if let None = meta {
             return;
         }
         if meta.unwrap() != ATTRIBUTE_TYPE {
             return;
         }
-        self.reader.consume(1).unwrap();
         match self.reader.read_byte().unwrap() {
             BOOL_VAL_TYPE => {
                 // parse the bool kv.
@@ -204,11 +203,10 @@ impl<'a> SpanDecoder<'a> {
 
     /// decode_event decodes the event.
     fn decode_event(&mut self) {
-        self.reader.peek_byte().map(|meta| {
+        self.reader.read_byte().map(|meta| {
             if meta != EVENT_TYPE {
                 return;
             }
-            self.reader.consume(1).unwrap();
             let mut event = Span_Event::new();
             let buf = self.reader.read_exact_length(8).unwrap();
             event.time_unix_nano = u64::from_be_bytes(buf.try_into().unwrap());
@@ -224,12 +222,11 @@ impl<'a> SpanDecoder<'a> {
 
     /// decode_link decodes the span link.
     fn decode_link(&mut self) {
-        let meta = self.reader.peek_byte();
+        let meta = self.reader.read_byte();
         meta.map(|meta| {
             if meta != LINK_TYPE {
                 return;
             }
-            self.reader.consume(1).unwrap();
             let mut link = Span_Link::new();
             link.trace_id = self.reader.read_exact_length(16).unwrap().to_vec();
             link.span_id = self.reader.read_exact_length(16).unwrap().to_vec();

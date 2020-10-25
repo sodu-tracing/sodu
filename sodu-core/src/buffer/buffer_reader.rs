@@ -101,12 +101,15 @@ mod tests {
         buffer.write_byte(1);
         buffer.write_raw_slice(&vec![2; 16]);
         buffer.write_slice(&vec![1; 4]);
+        buffer.write_slice(&vec![1; 4]);
+        buffer.write_raw_slice(&vec![2; 16]);
         let mut reader = BufferReader::new(buffer.bytes_ref());
         let id: Vec<u8> = vec![1; 1];
         assert_eq!(&id[..], reader.read_exact_length(1).unwrap());
         let id: Vec<u8> = vec![2; 16];
         assert_eq!(reader.read_exact_length(16).unwrap(), &id[..]);
         let id: Vec<u8> = vec![1; 4];
+        assert_eq!(reader.read_slice().unwrap().unwrap(), &id[..]);
         assert_eq!(reader.read_slice().unwrap().unwrap(), &id[..]);
     }
 }

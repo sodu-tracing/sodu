@@ -51,7 +51,6 @@ impl RecoveryManager {
 
     fn replay_wal(&self, checkpoint: WalCheckPoint) {
         debug!("replaying wal");
-        // now get the wal offset from the last segment file.
         let mut segment_file_ids = self.get_segment_file_ids();
         segment_file_ids.sort_by(|a, b| b.cmp(&a));
         let mut iterated_segments = 0;
@@ -204,7 +203,13 @@ impl RecoveryManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::buffer::buffer::Buffer;
+    use crate::encoder::span::encode_span;
+    use crate::json_encoder::encoder::encode_trace;
+    use crate::proto::service::QueryRequest;
+    use crate::segment::segment::tests::gen_traces;
     use crate::utils::utils::init_all_utils;
+    use crate::utils::utils::spans_to_trace;
     use crate::wal::wal::tests::{generate_span, get_tmp_option};
     use crate::wal::wal::Wal;
     use std::fs::{create_dir_all, remove_file};
@@ -277,5 +282,64 @@ mod tests {
         // Now we should be able to new segment file.
         let segment_files_path = read_files_in_dir(&opt.shard_path, "segment").unwrap();
         assert_eq!(segment_files_path.len(), 2);
+    }
+
+    #[test]
+    fn test_segment_replay() {
+        init_all_utils();
+        let opt = get_tmp_option();
+        create_dir_all(&opt.wal_path).unwrap();
+        create_dir_all(&opt.shard_path).unwrap();
+        let mut wal = Wal::new(opt.clone()).unwrap();
+        // write all span.
+        let mut traces = gen_traces(100, 5000);
+        for trace in &traces {
+            for span in trace {
+                wal.write_spans(span);
+            }
+        }
+        wal.submit_buffer_to_iou();
+        wal.wait_for_submitted_wal_span();
+        drop(wal);
+        // verify whether wal itr working well.
+        let mut wal_itr = WalIterator::new(0, 0, HashMap::default(), opt.wal_path.clone()).unwrap();
+        for trace in &traces {
+            for span in trace {
+                let (wal_span_buf, _, _) = wal_itr.next().unwrap();
+                let wal_span = decode_span(&wal_span_buf);
+                assert_eq!(&wal_span, span);
+            }
+        }
+        // Now repair the crash.
+        let meta_store = Arc::new(SoduMetaStore::new(&opt));
+        let recovery_manager = RecoveryManager::new(opt.clone(), meta_store);
+        recovery_manager.repair();
+        // now read the segment files and check whether
+        // we have correct traces in the repaired segment files.
+        println!(
+            "{:?}",
+            read_files_in_dir(&opt.shard_path, "segment").unwrap()
+        );
+        let file = File::open(opt.shard_path.join(format!("{:?}.segment", 1))).unwrap();
+        let segment_file = SegmentFile::new(file).unwrap();
+        let req = QueryRequest::default();
+        let mut itr = segment_file.get_iter_for_query(&req).unwrap();
+        traces.reverse();
+        for (_, trace) in traces.into_iter().enumerate() {
+            let (start_ts, trace_buf) = itr.next().unwrap();
+            assert_eq!(start_ts, trace[0].start_time_unix_nano);
+            let mut spans_buf = Vec::new();
+            for span in trace {
+                let mut span_buf = Buffer::with_size(1);
+                encode_span(&span, &mut span_buf);
+                spans_buf.push(span_buf.bytes());
+            }
+            assert_eq!(
+                trace_buf,
+                spans_to_trace(spans_buf.iter().map(|a| &a[..]).collect())
+            );
+            let mut json_buffer = Buffer::with_size(1);
+            encode_trace(&mut json_buffer, &trace_buf[..]);
+        }
     }
 }
