@@ -23,6 +23,7 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use std::u64;
 use unsigned_varint::encode;
+use xorfilter::Xor8;
 
 /// SegmentBuilder is used to build segment files.
 pub struct SegmentBuilder {
@@ -46,6 +47,7 @@ pub struct SegmentBuilder {
     max_wal_offset: u64,
     /// segment id of the builder.
     segment_id: u64,
+    xor_filter: Xor8,
 }
 
 impl SegmentBuilder {
@@ -61,6 +63,7 @@ impl SegmentBuilder {
             max_wal_id: 0,
             max_wal_offset: 0,
             segment_id: segment_id,
+            xor_filter: Xor8::default(),
         }
     }
 
@@ -93,6 +96,7 @@ impl SegmentBuilder {
             if idx == 0 {
                 self.buffer.write_raw_slice(span);
                 tmp_trace_id = span[..16].to_vec();
+                self.xor_filter.insert(&tmp_trace_id);
                 continue;
             }
             assert_eq!(&tmp_trace_id[..], &span[..16]);
@@ -190,7 +194,13 @@ impl SegmentBuilder {
             mem::replace(&mut segment_metadata.sorted_trace_ids, RepeatedField::new());
         self.trace_offsets = trace_offsets.to_vec();
         self.chunks = chunks.to_vec();
+        self.xor_filter.build();
         &self.buffer
+    }
+
+    /// filter_to_bytes converts filter to bytes vector.
+    pub fn filter_to_bytes(&self) -> Vec<u8> {
+        self.xor_filter.to_bytes()
     }
 
     /// get_wal_check_point returns wal checkpoint of this segment file.
