@@ -24,7 +24,7 @@ use std::fmt::Display;
 use std::fs::read_dir;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
-
+use std::u64;
 pub fn init_all_utils() {
     Logger::with_env_or_str("debug").start().unwrap();
 }
@@ -173,6 +173,7 @@ pub fn spans_to_trace(spans: Vec<&[u8]>) -> Vec<u8> {
 /// this mod contains test helper functions for the whole project level.
 #[cfg(test)]
 pub mod tests {
+    use super::*;
     use crate::buffer::buffer::Buffer;
     use crate::encoder::decoder::InplaceSpanDecoder;
     use crate::encoder::span::encode_span;

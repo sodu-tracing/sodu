@@ -24,6 +24,8 @@ parking_lot = "0.11.0"
 anyhow = "1.0"
 serde = "1.0.117"
 xorfilter-rs = { git = "https://github.com/sodu-tracing/xorfilter" }
+hex = "0.4.2"
+
 [dependencies.rocksdb]
 git = "https://github.com/tikv/rust-rocksdb.git"
 

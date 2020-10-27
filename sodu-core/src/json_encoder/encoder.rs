@@ -19,7 +19,7 @@ use crate::encoder::span::{
     PARENT_SPAN_ID_EXIST, STRING_VAL_TYPE,
 };
 use crate::proto::service::InternalTrace;
-use crate::utils::utils::hash_bytes;
+use hex;
 use std::convert::TryInto;
 use std::fmt::Display;
 use std::{i64, u64};
@@ -42,7 +42,7 @@ pub fn encode_trace(buf: &mut Buffer, trace: &[u8]) {
     buf.write_byte(b'{');
     // write trace id.
     buf.write_raw_slice(r#""trace_id":"#.as_bytes());
-    buf.write_raw_slice(format!("{:?},", hash_bytes(&trace[..16])).as_bytes());
+    buf.write_raw_slice(format!("{:?},", hex::encode(&trace[..16])).as_bytes());
     encode_spans(buf, &trace[16..]);
     buf.write_byte(b'}');
 }
@@ -68,12 +68,12 @@ fn encode_span(buf: &mut Buffer, reader: &mut BufferReader) {
     let span_id = reader.read_exact_length(16).unwrap();
     // write span id.
     buf.write_raw_slice(r#""span_id":"#.as_bytes());
-    buf.write_raw_slice(format!("{:?},", hash_bytes(span_id)).as_bytes());
+    buf.write_raw_slice(format!("{:?},", hex::encode(span_id)).as_bytes());
     // write parent span id if it's exist.
     if reader.read_byte().unwrap() == PARENT_SPAN_ID_EXIST {
         buf.write_raw_slice(r#""parent_span_id":"#.as_bytes());
         let parent_span_id = reader.read_exact_length(16).unwrap();
-        buf.write_raw_slice(format!("\"{:?}\",", hash_bytes(parent_span_id)).as_bytes());
+        buf.write_raw_slice(format!("{:?},", hex::encode(parent_span_id)).as_bytes());
     }
     // write read and end timestamp.
     buf.write_raw_slice(r#""start_unix_nano":"#.as_bytes());
@@ -124,9 +124,9 @@ fn encode_link(buf: &mut Buffer, reader: &mut BufferReader, prev: bool) {
         }
         buf.write_byte(b'{');
         let trace_id = reader.read_exact_length(16).unwrap();
-        buf.write_raw_slice(format!(r#""trace_id":{:?},"#, hash_bytes(trace_id)).as_bytes());
+        buf.write_raw_slice(format!(r#""trace_id":{:?},"#, hex::encode(trace_id)).as_bytes());
         let span_id = reader.read_exact_length(16).unwrap();
-        buf.write_raw_slice(format!(r#""span_id":{:?},"#, hash_bytes(span_id)).as_bytes());
+        buf.write_raw_slice(format!(r#""span_id":{:?},"#, hex::encode(span_id)).as_bytes());
         let trace_state =
             String::from_utf8_lossy(reader.read_slice().unwrap().unwrap()).to_string();
         buf.write_raw_slice(format!(r#""trace_state":{:?},"#, trace_state).as_bytes());
@@ -268,7 +268,7 @@ mod tests {
         encode_trace(&mut buffer_2, buffer.bytes_ref());
         assert_eq!(
             String::from_utf8_lossy(buffer_2.bytes_ref()).to_string(),
-            r#"{"trace_id":5506010466157640574,"spans":[{"span_id":5506010466157640574,"start_unix_nano":200,"end_unix_nano":203,"span_kind":0,"name":"hello","attributes":[{"key": "string kv", "value":"let's make it right"}],"events":[{"time_unix_nano":100,"name":"log 1","attributes":[{"key": "string kv", "value":"let's make it right"}]},{"time_unix_nano":100,"name":"log2","attributes":[{"key": "string kv", "value":"let's make it right"}]}],"links":[{"trace_id":5506010466157640574,"span_id":5506010466157640574,"trace_state":"","attributes":[{"key": "string kv", "value":"let's make it right"}]}]}]}"#
+            r#"{"trace_id":"00000000000000000000000000000000","spans":[{"span_id":"00000000000000000000000000000000","start_unix_nano":200,"end_unix_nano":203,"span_kind":0,"name":"hello","attributes":[{"key": "string kv", "value":"let's make it right"}],"events":[{"time_unix_nano":100,"name":"log 1","attributes":[{"key": "string kv", "value":"let's make it right"}]},{"time_unix_nano":100,"name":"log2","attributes":[{"key": "string kv", "value":"let's make it right"}]}],"links":[{"trace_id":"00000000000000000000000000000000","span_id":"00000000000000000000000000000000","trace_state":"","attributes":[{"key": "string kv", "value":"let's make it right"}]}]}]}"#
         )
     }
 
