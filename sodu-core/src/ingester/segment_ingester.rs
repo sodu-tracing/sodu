@@ -147,6 +147,10 @@ impl SegmentIngester {
                 // TODO: This may run as if we are running in a sync way. We need some thorttling while
                 // flushing series of segments.
                 self.reclaim_submitted_builder_buffer();
+                // Don't flush segment if there is no data in it. It can happen while wal replay.
+                if past_segment.segment_size() == 0 {
+                    continue;
+                }
                 // This segment is older than 5 minutes. So, let's flush this.
                 let mut builder = self.get_segment_builder();
                 for (start_ts, spans) in past_segment.iter() {

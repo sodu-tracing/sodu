@@ -33,7 +33,9 @@ impl Iterator for SegmentFileIterator {
         // try to read from the current chunk reader.
         if let Some(reader) = &mut self.current_chunk_reader {
             if !reader.is_end() {
+                println!("read slice");
                 let trace = reader.read_slice().unwrap().unwrap();
+                println!("read slice passed");
                 let decoder = InplaceSpanDecoder(trace);
                 let trace_start_ts = decoder.start_ts();
                 // skip this trace if the trace is not falling in iterator range.
@@ -116,6 +118,31 @@ pub mod tests {
         let file = File::open(&segment_file_path).unwrap();
         let segment_file = SegmentFile::new(file).unwrap();
         let req = QueryRequest::default();
+        let mut segment_itr = segment.iter();
+        for (start_ts, trace) in segment_file.get_iter_for_query(&req).unwrap() {
+            let (in_memory_start_ts, in_memory_trace) = segment_itr.next().unwrap();
+            let mut extended_trace = Vec::new();
+            for (idx, span) in in_memory_trace.into_iter().enumerate() {
+                if idx == 0 {
+                    extended_trace.extend(span);
+                    continue;
+                }
+                extended_trace.extend(&span[16..]);
+            }
+            assert_eq!(start_ts, in_memory_start_ts);
+            assert_eq!(&trace[..], &extended_trace[..]);
+        }
+
+        // add tags to filter traces.
+        let mut req = QueryRequest::default();
+        let mut tags = HashMap::default();
+        tags.insert(
+            String::from("sup magic man"),
+            String::from("let's make it right"),
+        );
+        req.tags = tags;
+        let file = File::open(&segment_file_path).unwrap();
+        let segment_file = SegmentFile::new(file).unwrap();
         let mut segment_itr = segment.iter();
         for (start_ts, trace) in segment_file.get_iter_for_query(&req).unwrap() {
             let (in_memory_start_ts, in_memory_trace) = segment_itr.next().unwrap();

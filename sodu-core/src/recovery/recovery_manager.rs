@@ -113,10 +113,12 @@ impl RecoveryManager {
         if let None = wal_itr {
             return;
         }
-        let wal_itr = wal_itr.unwrap();
+        let mut wal_itr = wal_itr.unwrap();
         let mut ingester =
             SegmentIngester::new(self.opt.shard_path.clone(), self.meta_store.clone());
         let mut ingested = false;
+        // First span is already persisted in the segment file. So, let's just ignore that.
+        wal_itr.next();
         for (encoded_buf, wal_id, offset) in wal_itr {
             ingested = true;
             // TODO: may be we do want to skip the first iteration because,
