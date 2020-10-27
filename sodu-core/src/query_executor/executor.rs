@@ -103,12 +103,10 @@ impl QueryExecutor {
             if !is_over_lapping_range(req.get_time_range(), segment_file.get_time_range()) {
                 continue;
             }
-            println!("overlapped file");
 
             // iterate over the filtered segment to collect all the traces.
             if let Some(itr) = segment_file.get_iter_for_query(&req) {
                 for (start_ts, trace) in itr {
-                    println!("overlapped file iteration");
                     let mut internal_trace = InternalTrace::default();
                     internal_trace.set_trace(trace);
                     internal_trace.set_start_ts(start_ts);
@@ -119,7 +117,6 @@ impl QueryExecutor {
                         res.set_traces(RepeatedField::from(internal_traces));
                         return res;
                     }
-                    println!("pushed");
                 }
             }
         }
