@@ -122,34 +122,6 @@ pub fn is_over_lapping_range(req: &TimeRange, block: &TimeRange) -> bool {
         || (req_min_start_ts <= block_max_start_ts && block_max_start_ts <= req_max_start_ts)
 }
 
-/// this mod contains test helper functions for the whole project level.
-#[cfg(test)]
-pub mod tests {
-    use crate::buffer::buffer::Buffer;
-    use crate::encoder::decoder::InplaceSpanDecoder;
-    use crate::encoder::span::encode_span;
-    use crate::proto::trace::Span;
-    use crate::wal::wal::EncodedRequest;
-
-    /// get_encoded_req returns encoded request and hashed trace id.
-    pub fn get_encoded_req<'a>(
-        span: &Span,
-        mut buffer: &'a mut Buffer,
-    ) -> (EncodedRequest<'a>, u64) {
-        buffer.clear();
-        let indices = encode_span(&span, &mut buffer);
-        let req = EncodedRequest {
-            encoded_span: buffer.bytes_ref(),
-            indices: indices,
-            start_ts: span.start_time_unix_nano,
-            wal_offset: 0,
-        };
-        let decoder = InplaceSpanDecoder(req.encoded_span);
-        let hashed_id = decoder.hashed_trace_id();
-        (req, hashed_id)
-    }
-}
-
 /// calculate_trace_size is used to calculate trace size from the list of spans.
 pub fn calculate_trace_size(trace: &Vec<&[u8]>) -> usize {
     let mut size: usize = 0;
@@ -196,4 +168,32 @@ pub fn spans_to_trace(spans: Vec<&[u8]>) -> Vec<u8> {
         buffer.write_raw_slice(&span[16..]);
     }
     buffer.bytes()
+}
+
+/// this mod contains test helper functions for the whole project level.
+#[cfg(test)]
+pub mod tests {
+    use crate::buffer::buffer::Buffer;
+    use crate::encoder::decoder::InplaceSpanDecoder;
+    use crate::encoder::span::encode_span;
+    use crate::proto::trace::Span;
+    use crate::wal::wal::EncodedRequest;
+
+    /// get_encoded_req returns encoded request and hashed trace id.
+    pub fn get_encoded_req<'a>(
+        span: &Span,
+        mut buffer: &'a mut Buffer,
+    ) -> (EncodedRequest<'a>, u64) {
+        buffer.clear();
+        let indices = encode_span(&span, &mut buffer);
+        let req = EncodedRequest {
+            encoded_span: buffer.bytes_ref(),
+            indices: indices,
+            start_ts: span.start_time_unix_nano,
+            wal_offset: 0,
+        };
+        let decoder = InplaceSpanDecoder(req.encoded_span);
+        let hashed_id = decoder.hashed_trace_id();
+        (req, hashed_id)
+    }
 }

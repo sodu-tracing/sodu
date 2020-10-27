@@ -23,6 +23,7 @@ crossbeam = "0.7.3"
 parking_lot = "0.11.0"
 anyhow = "1.0"
 serde = "1.0.117"
+xorfilter-rs = { git = "https://github.com/sodu-tracing/xorfilter" }
 [dependencies.rocksdb]
 git = "https://github.com/tikv/rust-rocksdb.git"
 
