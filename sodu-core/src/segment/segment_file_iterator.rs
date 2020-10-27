@@ -25,17 +25,23 @@ pub struct SegmentFileIterator {
     pub current_chunk_reader: Option<ConsumedBufferReader>,
     pub max_start_ts: u64,
     pub min_start_ts: u64,
+    pub iterated_traces: usize,
 }
 
 impl Iterator for SegmentFileIterator {
     type Item = (u64, Vec<u8>);
     fn next(&mut self) -> Option<Self::Item> {
+        // Fast path to avoid iterating the entire segment if we already got the neccessary
+        // traces.
+        if self.filtered_trace_ids.len() != 0
+            && self.filtered_trace_ids.len() == self.iterated_traces
+        {
+            return None;
+        }
         // try to read from the current chunk reader.
         if let Some(reader) = &mut self.current_chunk_reader {
             if !reader.is_end() {
-                println!("read slice");
                 let trace = reader.read_slice().unwrap().unwrap();
-                println!("read slice passed");
                 let decoder = InplaceSpanDecoder(trace);
                 let trace_start_ts = decoder.start_ts();
                 // skip this trace if the trace is not falling in iterator range.
@@ -52,6 +58,7 @@ impl Iterator for SegmentFileIterator {
                 {
                     return self.next();
                 }
+                self.iterated_traces += 1;
                 return Some((trace_start_ts, trace.to_vec()));
             }
         }

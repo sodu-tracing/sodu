@@ -84,6 +84,7 @@ impl SegmentFile {
             current_chunk_reader: None,
             max_start_ts: req.get_time_range().get_max_start_ts(),
             min_start_ts: req.get_time_range().get_min_start_ts(),
+            iterated_traces: 0,
         })
     }
 
