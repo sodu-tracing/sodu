@@ -61,6 +61,8 @@ pub struct SegmentIngester {
     builder_freelist: Vec<SegmentBuilder>,
     /// meta_store is used to store wal check point.
     meta_store: Arc<SoduMetaStore>,
+    /// pending segments are the segments which going over async flush.
+    pending_segments: Vec<Segment>,
 }
 
 impl SegmentIngester {
@@ -88,6 +90,7 @@ impl SegmentIngester {
             builder_freelist: Vec::new(),
             buffered_segment: VecDeque::new(),
             meta_store,
+            pending_segments: Vec::new(),
         }
     }
 
@@ -187,6 +190,7 @@ impl SegmentIngester {
                     );
                 }
                 self.submitted_builders.push(builder);
+                self.pending_segments.push(past_segment);
             }
             break;
         }
@@ -232,6 +236,8 @@ impl SegmentIngester {
             }
             break;
         }
+        // clear all the pending segments.
+        self.pending_segments = Vec::new();
     }
 
     /// get_segment_builder returns segment builder if it's in the freelist. Otherwise, it creates
@@ -267,6 +273,12 @@ impl SegmentIngester {
         for bufferd_segment in &self.buffered_segment {
             if is_over_lapping_range(req.get_time_range(), &bufferd_segment.get_time_range()) {
                 segments.push(bufferd_segment);
+            }
+        }
+        // Now, iterate over pending segments.
+        for past_segment in &self.pending_segments {
+            if is_over_lapping_range(req.get_time_range(), &past_segment.get_time_range()) {
+                segments.push(past_segment);
             }
         }
         segments
